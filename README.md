@@ -51,6 +51,7 @@ From the `call` procedure, set the value of the `lineStat` variable to the prede
 ## Known limitation
 
 - Limit line (paragraph) length to 255 bytes!
+- no table support (yet)
 
 # Description of the example
 
