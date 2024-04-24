@@ -21,6 +21,7 @@ Read the following information and the example file.
 ## Features:
 
 - Ability to read in data during parsing, which theoretically removes the 255 character limit per line/paragraph.
+- LF EOL conversion during parsing
 - Use of procedural variables to call procedures:
 
   `_callFlushBuffer` - a call procedure called to perform a user action on the returned string. In simple terms, displaying the text.

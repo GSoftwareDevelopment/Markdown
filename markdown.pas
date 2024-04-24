@@ -5,6 +5,7 @@ v.0.2
 - Enhance headers from H1 to H4
 - Ability to read in data during parsing, which theoretically removes the 255 character limit per line/paragraph.
 - The maximum length of content between styles and in the hyperlink tag is 255 characters.
+- LF EOL conversion during parsing
 
 v.0.1
 Supports tags:
@@ -89,6 +90,11 @@ const
   tagCodeLanguage       = %01000010;
 
   tagREM                = %00100000;
+
+  tagTable              = %00010000;
+  tagTableNewCell       = %00010000;
+  tagTableNewRow        = %00010001;
+  tagTableHeader        = %00010010;
 
   tagList               = %00001000;
   tagListPointed        = %00001001; // List pointed
