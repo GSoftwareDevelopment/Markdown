@@ -1,5 +1,17 @@
 uses Crt, MarkDown;
 
+(*
+The data is retrieved from memory (defined in an array constant)
+The `_fetchLine` procedure provides a single line of data to the parser. It also performs a simple end-of-line character conversion of type CR/LF. Returns an error when the line buffer is exceeded.
+
+The `printMD` procedure is responsible for displaying the processed text on the screen.
+It distinguishes the `Printable` style, which is used for non-printable text fragments, while allowing you to process this information.
+Distinguishes the `Invers` style and hyperlinks on the screen.
+Besides, it displays the rest of the text.
+
+The `parseMD` procedure prepares the engine variables for operation.
+*)
+
 const
   MD:Array of char = '# Naglowek poziom #1'#10#13'To jest tekst [w nim link](id) i dalszy tekst.'#155#155'I kolejna linia, a w niej *tekst w inwersie* oraz _podkreslenie_.'#155'A tutaj (w nawiasie jest tekst i wstawka kodu `inner();`)'#155'- sa tez'#155'- listy punktowe'#155#155'1. a takze'#155'2. numeryczne'#155#155'---'#155'blok komentarza'#155'---'#155'```basic'#155'10 PRINT "ATARI"'#155'20 GOTO 10'#155'```'#155;
 
