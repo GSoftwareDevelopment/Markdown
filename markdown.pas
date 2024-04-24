@@ -1,6 +1,12 @@
 unit MarkDown;
 
 (*
+v.0.2
+- Enhance headers from H1 to H4
+- Ability to read in data during parsing, which theoretically removes the 255 character limit per line/paragraph.
+- The maximum length of content between styles and in the hyperlink tag is 255 characters.
+
+v.0.1
 Supports tags:
 - *H1-H3* headers
 - *Code inserts* i.e. a single "backwards" apostrophe (the one under the tilde)
@@ -19,7 +25,9 @@ Features:
 `_callFlushBuffer` - a call procedure called to perform a user action on the returned string. In simple terms, displaying the text.
 `_callFetchLine` - a call procedure, fetching a line (paragraph) of MarkDown code into a buffer for processing.
 
-- Limit line (paragraph) length to 255 bytes!
+- ~~Limit line (paragraph) length to 255 bytes!~~
+
+- No table support (yet)
 
 - Tags as well as styles provide information to the call procedure every word,
 except for the start of the REM and CODE block.
@@ -87,9 +95,10 @@ const
   tagListNumbered       = %00001010; // List numbered
 
   tagHeader             = %00000100;
-  tagH1                 = %00000101;  // Header level 1
-  tagH2                 = %00000110;  // Header level 2
-  tagH3                 = %00000111;  // Header level 3
+  tagH1                 = %00000100;  // Header level 1
+  tagH2                 = %00000101;  // Header level 2
+  tagH3                 = %00000110;  // Header level 3
+  tagH4                 = %00000111;  // Header level 4
 
 // styles
   stylePrint            = %00000001;  // Printable word
@@ -126,15 +135,22 @@ var
   lineStat:Byte       absolute $F0;       // line status code
   indentID:Byte       absolute $F1;       // line indent
   ch:Char             absolute $F2;       // character
-  curChar:PChar       absolute $F3;       // pointer to current character in MD source
   parseChar:PChar     absolute $F5;       // pointer to current character in line
   tag:Byte            absolute $F7;       // current tag code
   style:Byte          absolute $F8;       // current style code
-  endPtr:Pointer;                         // pointer to the end of MD source
+  tmp:Byte;
+  old:Pointer;
 
 function parseTag():Byte;
 
 implementation
+
+procedure _fetchLine();
+begin
+  old:=parseChar; inc(parseChar); _callFetchLine(); parseChar:=old;
+  if parseStrLen=0 then
+    lineStat:=errLineTooLong;
+end;
 
 procedure removeStrChars(count:Byte);
 begin
@@ -146,10 +162,27 @@ end;
 
 function countChars(nCh:Char):Byte;
 begin
-  result:=parseStrLen; ch:=parseChar^;
-  while (result>0) and (ch=nCh) do
+  tmp:=parseStrLen; result:=parseStrLen;
+  while result>0 do
   begin
-    inc(parseChar); dec(result); ch:=parseChar^;
+    ch:=parseChar^;
+    while (result>0) and (ch=nCh) do
+    begin
+      inc(parseChar); dec(result); ch:=parseChar^;
+    end;
+
+    if result=0 then
+    begin
+      dec(parseChar); _fetchLine();
+      if lineStat and statError=0 then
+      begin
+        inc(result,parseStrLen-tmp); tmp:=parseStrLen;
+      end
+      else
+        break;
+    end
+    else
+      break;
   end;
   if result>0 then
   begin
@@ -159,11 +192,28 @@ end;
 
 function findChar(nCh:char):Byte;
 begin
-  result:=parseStrLen;
-  repeat
-    inc(parseChar); dec(result);
-    ch:=parseChar^;
-  until (ch=nCh) or (result=0);
+  tmp:=parseStrLen; result:=parseStrLen;
+  while result>0 do
+  begin
+    repeat
+      inc(parseChar); dec(result);
+      ch:=parseChar^;
+    until (ch=nCh) or (result=0);
+
+    if result=0 then
+    begin
+      dec(parseChar); _fetchLine();
+      if lineStat and statError=0 then
+      begin
+        inc(result,parseStrLen-tmp); tmp:=parseStrLen;
+      end
+      else
+        break;
+    end
+    else
+      break;
+  end;
+
   if result>0 then
   begin
     result:=parseStrLen-result;
@@ -172,11 +222,29 @@ end;
 
 function checkValInt():Byte;
 begin
-  result:=parseStrLen; ch:=parseChar^;
-  while (result>0) and ((ch>=cNUMLIST0) and (ch<=cNUMLIST9)) do
+  tmp:=parseStrLen; result:=parseStrLen;
+  while result>0 do
   begin
-    inc(parseChar); dec(result); ch:=parseChar^;
+    ch:=parseChar^;
+    while (result>0) and ((ch>=cNUMLIST0) and (ch<=cNUMLIST9)) do
+    begin
+      inc(parseChar); dec(result); ch:=parseChar^;
+    end;
+
+    if result=0 then
+    begin
+      dec(parseChar); _fetchLine();
+      if lineStat and statError=0 then
+      begin
+        inc(result,parseStrLen-tmp); tmp:=parseStrLen;
+      end
+      else
+        break;
+    end
+    else
+      break;
   end;
+
   if result>0 then
   begin
     result:=parseStrLen-result;
@@ -203,205 +271,20 @@ end;
 //
 
 function parseTag():Byte;
-var
-  tmp:Byte;
 
-  procedure toggleStyle(nStyle:Byte);
-  begin
-    if (lineStat and statWordBegin<>0) then
-    begin
-      if findChar(ch)>0 then
-      begin
-        removeStrChars(1);
-        style:=style xor nStyle;
-      end;
-    end
-    else
-    if (style and nStyle<>0) then
-    begin
-      dec(parseChar); _flushBuffer();
-      removeStrChars(1);
-      style:=style xor nStyle;
-    end;
-  end;
-
-  procedure checkCodeInsert();
-  begin
-    if (lineStat and statWordBegin<>0) then
-    begin
-      if countChars(cCODEINS)=1 then
-      begin // code insert
-        if findChar(cCODEINS)>0 then
-        begin
-          removeStrChars(1);
-          tag:=tagCodeInsert;
-        end;
-      end
-    end
-    else
-    if (tag=tagCodeInsert) then
-    begin
-      dec(parseChar); _flushBuffer();
-      removeStrChars(1);
-      tag:=0;
-    end;
-  end;
-
-  procedure checkREMBlock();
-  begin
-    tmp:=countChars(cREM);
-    if (lineStat and StatLineBegin<>0) and (tmp=3) then
-    begin
-      removeStrChars(3);
-      if tag<>tagREM then
-      begin
-        tag:=tagREM; // style:=style and (not stylePrint);
-      end
-      else
-      begin
-        tag:=0; // style:=style or stylePrint;
-      end;
-      style:=style xor stylePrint;
-      parseStrLen:=0; // rest line are ignored
-    end
-    else
-    begin
-      parseChar:=@parseStr+1; ch:=parseChar^;
-    end;
-  end;
-
-  procedure checkCODEBlock();
-  begin
-    if (lineStat and statLineBegin<>0) then
-    begin
-      tmp:=countChars(cCODE);
-      if (tmp=3) then // code block
-      begin
-        removeStrChars(3);
-        if tag<>tagCode then
-        begin
-          tag:=tagCodeLanguage; style:=style and (not stylePrint);
-          findChar(cSPACE);
-          _flushBuffer();
-          tag:=tagCode; style:=style or stylePrint;
-        end
-        else
-          tag:=0;
-        parseStrLen:=0; // rest line are ignored
-      end
-      else
-      begin
-        parseChar:=@parseStr+1; ch:=parseChar^;
-      end;
-    end;
-  end;
-
-  procedure checkListPointed();
-  begin
-    if (lineStat and statLineBegin<>0) then
-    begin
-      if (findChar(cSPACE)=1) then
-      begin
-        tag:=tagListPointed;
-        _flushBuffer();
-        tag:=tagList;
-      end;
-    end;
-  end;
-
-  procedure checkListNumbered();
-  begin
-    if (lineStat and statLineBegin<>0) then
-    begin
-      if (checkValInt()>0) and (ch=cNUMLIST) then
-      begin
-        if findChar(cSpace)=1 then
-        begin
-          tag:=tagListNumbered;
-          _flushBuffer();
-          tag:=tagList;
-        end;
-      end;
-    end;
-  end;
-
-  procedure checkHeader();
-  begin
-    if (lineStat and statLineBegin<>0) then
-    begin
-      tmp:=countChars(cHEADER);
-      if (tmp>0) and (tmp<=3) and (ch=cSPACE) then
-      begin
-        removeStrChars(tmp+1);
-        tag:=tagHeader+tmp;
-      end
-      else
-        tag:=0;
-    end;
-  end;
-
-  procedure checkLinkAddress();
-  begin
-    if ch=cOADDR then
-    begin
-      if tag=tagLinkDescription then
-      begin
-        if (findChar(cCADDR)>0) then
-        begin
-          removeStrChars(1);
-          tag:=tagLinkDestination;
-        end;
-      end;
-    end
-    else
-    if tag=tagLinkDestination then
-    begin
-      dec(parseChar); _flushBuffer();
-      removeStrChars(1);
-      tag:=0; style:=style or stylePrint;
-    end;
-  end;
-
-  procedure checkLinkDescription();
-  begin
-    if ch=cOLINK then
-    begin
-      if tag<>tagLinkDescription then
-      begin
-        if (findChar(cCLINK)>0) then
-        begin
-          if (findChar(cOADDR)=1) and (findChar(cCADDR)>0) then
-          begin
-            removeStrChars(1);
-            tag:=tagLinkDescription;
-          end;
-        end;
-      end;
-    end
-    else
-    if tag=tagLinkDescription then
-    begin
-      dec(parseChar); _flushBuffer();
-      removeStrChars(1); style:=style and (not stylePrint);
-    end;
-  end;
+{$I 'markdown-tags.inc'}
 
 begin
-  while (lineStat and statError=0) and (curChar<endPtr) do
+  parseStrLen:=0; parseChar:=@parseStr;
+  lineStat:=statLineBegin+statWordBegin;
+  indentID:=0;
+  tag:=0; style:=stylePrint;
+  while (lineStat and statError=0) do
   begin
-    // fetch line
-    _callFetchLine();
-
-    parseChar:=@parseStr;
-    lineStat:=statLineBegin+statWordBegin;
-    indentID:=0;
-    if (tag<>tagCode) and (tag<>tagREM) then
-    begin
-      tag:=0; style:=stylePrint;
-    end;
+    _fetchLine();
 
     // parse line
-    while (lineStat and statError=0) and (parseStrLen>0) do
+    while (lineStat and statError=0) and (parseStrLen>0) and (byte(parseChar-@parseStr)<parseStrLen) do
     begin
       inc(parseChar);
       ch:=parseChar^;
@@ -419,12 +302,15 @@ begin
             lineStat:=lineStat or statWordBegin;
             continue;
           end;
-        cRETURN:
+        cRETURN,cLF:
           begin
+            if ch=cLF then ch:=cRETURN;
+            parseChar^:=ch;
             _flushBuffer();
+            indentID:=0;
             style:=style and (stylePrint); // keep only Printable style flag status
             tag:=tag and (tagREM+tagCODE); // keep only REM tag flag status
-            parseStrLen:=0;
+            lineStat:=lineStat or (statLineBegin+statWordBegin);
             continue;
           end;
       end;
@@ -453,7 +339,7 @@ begin
       else
         lineStat:=lineStat and not (statLineBegin+statWordBegin);
     end;
-    if ch<>cRETURN then lineStat:=errBufferEnd;
+    // if ch<>cRETURN then inc(// lineStat:=errBufferEnd;
   end;
 end;
 
