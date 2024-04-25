@@ -2,7 +2,7 @@ uses Crt, MarkDown;
 
 (*
 The data is retrieved from memory (defined in an array constant)
-The `getLine` procedure provides a single line of data to the parser. It also performs a simple end-of-line character conversion of type CR/LF. Returns an error when the line buffer is exceeded.
+The `getLine` procedure provides a single line of data to the parser. It also performs a simple end-of-line character conversion of type CR/LF. Returns an `lineStat` when the line buffer is exceeded.
 
 The `printMD` procedure is responsible for displaying the processed text on the screen.
 It distinguishes the `Printable` style, which is used for non-printable text fragments, while allowing you to process this information.
@@ -26,7 +26,7 @@ begin
     parseChar^:=ch; inc(parseChar); inc(curChar); inc(parseStrLen);
   until (parseStrLen=0) or (curChar>=endPtr) or (ch=cRETURN) or (ch=cLF) or (ch=cCR);
   if (curChar>=endPtr) then
-    lineStat:=errBreakParsing
+    parseError:=errBreakParsing
   else
   begin
     if (ch=cLF) or (ch=cCR) then
@@ -34,7 +34,7 @@ begin
       dec(parseChar); ch:=cReturn; parseChar^:=ch; inc(parseChar);
     end;
     if (ch<>cRETURN) then
-      if parseStrLen=255 then lineStat:=errLineTooLong;
+      if parseStrLen=255 then parseError:=errLineTooLong;
     ch:=curChar^;
     if (ch=cLF) or (ch=cCR) then inc(curChar);
   end;
@@ -52,7 +52,7 @@ procedure printMD();
   end;
 
 begin
-  if style and stylePrint=0 then exit;
+  if style and stylePrintable=0 then exit;
   if (style and styleInvers<>0) or
      (tag and tagLink<>0) then inversString(parseStr);
   write(parseStr);
@@ -64,7 +64,6 @@ begin
   _callFetchLine:=@getLine;
   curChar:=startMDPtr;
   endPtr:=endMDPtr;
-  lineStat:=0;
   parseTag();
 end;
 
