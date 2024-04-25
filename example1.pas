@@ -13,31 +13,28 @@ The `parseMD` procedure prepares the engine variables for operation.
 *)
 
 const
-  MD:Array of char = '# Naglowek poziom #1'#10#13'To jest tekst [w nim link](id) i dalszy tekst.'#155#155'I kolejna linia, a w niej *tekst w inwersie* oraz _podkreslenie_.'#155'A tutaj (w nawiasie jest tekst i wstawka kodu `inner();`)'#155'- sa tez'#155'- listy punktowe'#155#155'1. a takze'#155'2. numeryczne'#155#155'---'#155'blok komentarza'#155'---'#155'```basic'#155'10 PRINT "ATARI"'#155'20 GOTO 10'#155'```'#155;
+  MD:Array of char = '# Naglowek poziom #1'#155'To jest tekst [w nim link](id) i dalszy tekst.'#155#155'I kolejna linia, a w niej *tekst w inwersie* oraz _podkreslenie_.'#155'A tutaj (w nawiasie jest tekst i wstawka kodu `inner();`)'#155'- sa tez'#155'- listy punktowe'#155#155'1. a takze'#155'2. numeryczne'#155#155'---'#155'blok komentarza'#155'---'#155#155'```basic'#155'10 PRINT "ATARI"'#155'20 GOTO 10'#155'```'#155;
 
 var
-  curChar:PChar       absolute $F3;       // pointer to current character in MD source
+  curChar:PChar;                          // pointer to current character in MD source
   endPtr:Pointer;                         // pointer to the end of MD source
 
-procedure getLine();
+function getLine():Byte; stdcall;
+var
+  cnt:SmallInt;
+
 begin
-  repeat
-    ch:=curChar^;
-    parseChar^:=ch; inc(parseChar); inc(curChar); inc(parseStrLen);
-  until (parseStrLen=0) or (curChar>=endPtr) or (ch=cRETURN) or (ch=cLF) or (ch=cCR);
-  if (curChar>=endPtr) then
-    parseError:=errBreakParsing
-  else
+  result:=255-parseStrLen;
+  cnt:=word(endPtr-curChar);
+  if cnt>255 then cnt:=255;
+  if cnt>0 then
   begin
-    if (ch=cLF) or (ch=cCR) then
-    begin
-      dec(parseChar); ch:=cReturn; parseChar^:=ch; inc(parseChar);
-    end;
-    if (ch<>cRETURN) then
-      if parseStrLen=255 then parseError:=errLineTooLong;
-    ch:=curChar^;
-    if (ch=cLF) or (ch=cCR) then inc(curChar);
+    move(curChar,parseChar,cnt);
+    inc(curChar,cnt);
   end;
+  result:=cnt;
+  if (result=0) then
+    parseError:=errEndOfDocument
 end;
 
 procedure printMD();
@@ -70,5 +67,4 @@ end;
 begin
   poke(82,0); clrscr;
   parseMD(@MD,@MD+sizeOf(MD));
-  ReadKey;
 end.
