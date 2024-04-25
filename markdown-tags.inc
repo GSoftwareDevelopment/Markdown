@@ -48,13 +48,10 @@
       begin
         removeStrChars(3);
         if tag<>tagREM then
-        begin
-          pushTag(tagRem);
-        end
+          pushTag(tagRem)
         else
-        begin
           popTag();
-        end;
+        ch:=#0;
         style:=style xor stylePrintable;
       end
       else
@@ -80,6 +77,8 @@
         end
         else
           popTag();
+        ch:=#0;
+
       end
       else
       begin

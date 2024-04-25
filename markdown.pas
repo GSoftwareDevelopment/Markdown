@@ -283,7 +283,7 @@ begin
             lineIndentation:=0;
             if (style and (not stylePrintable)<>0) or
                (tag and (tagList+tagHeader)<>0)  then popTag();
-            if tag=tagCode then
+            if (tag and tagCODE<>0) then
               style:=style or stylePrintable      // only for CODE tag always set Printable
             else
               style:=style and stylePrintable;  // keep only Printable style flag status
