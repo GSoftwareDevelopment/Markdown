@@ -5,7 +5,6 @@ v.0.3
 - adjustable tag stack size
 - code size and speed optimization
 - improvement of tag recognition
--
 
 v.0.2
 - Enhance headers from H1 to H4
