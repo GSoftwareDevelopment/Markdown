@@ -13,7 +13,7 @@ The `parseMD` procedure prepares the engine variables for operation.
 *)
 
 const
-  MD:Array of char = '# Naglowek poziom #1'#155'To jest tekst [w nim link](id) i dalszy tekst.'#155#155'I kolejna linia, a w niej *tekst w inwersie* oraz _podkreslenie_.'#155'A tutaj (w nawiasie jest tekst i wstawka kodu `inner();`)'#155'- sa tez'#155'- listy punktowe'#155#155'1. a takze'#155'2. numeryczne'#155#155'---'#155'blok komentarza'#155'---'#155#155'```basic'#155'10 PRINT "ATARI"'#155'20 GOTO 10'#155'```'#155;
+  MD:Array of char = '# Header level #1'#155'This is th text [in it link](id) and further text.'#155#155'And another line, and in it *text in invers* and _underline_.'#155'And herej (in parentheses is the text and code insertion `inner();`)'#155'- there are also'#155'- bullet lists'#155#155'1. as well as'#155'2. numeric'#155#155'---'#155'comment block'#155'---'#155#155'```basic'#155'10 PRINT "ATARI"'#155'20 GOTO 10'#155'```'#155;
 
 var
   curChar:PChar;                          // pointer to current character in MD source
