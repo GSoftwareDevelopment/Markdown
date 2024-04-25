@@ -1,36 +1,45 @@
 uses Crt, CIO, MarkDown;
 
-procedure readLineFromFile();
-var
-  blockLen:Byte;
-
+function readLineFromFile():Byte; stdcall;
 begin
-  blockLen:=255-parseStrLen;
-  if (blockLen>0) then
-    if (parseStrLen+blockLen<256) then
+  result:=255-parseStrLen;
+  if (result>0) then
+    if (parseStrLen+result<256) then
     begin
-      bget(1,parseChar,blockLen);
-      blockLen:=peek($358); // #1 - result read bytes
-      if blockLen=0 then lineStat:=errBreakParsing;
-      inc(parseStrLen,blockLen);
+      bget(1,parseChar,result);
+      result:=peek($358); // #1 - LSB of readed bytes
+      if result=0 then parseError:=errEndOfDocument;
+      // inc(parseStrLen,blockLen);
     end;
 end;
 
 procedure printMD();
 
-  procedure inversString(S:PString);
+  procedure inversString();
   var
     i:byte;
 
   begin
-    for i:=1 to length(s) do
-      s[i]:=char(byte(s[i]) or $80);
+    for i:=1 to length(parseStr) do
+      parseStr[i]:=char(byte(parseStr[i]) or $80);
+  end;
+
+  procedure uppercaseString();
+  var
+    i:byte;
+
+  begin
+    for i:=1 to length(parseStr) do
+      if (parseStr[i]>=#97) and (parseStr[i]<=#122) then
+        parseStr[i]:=char(byte(parseStr[i])-32);
   end;
 
 begin
-  if style and stylePrint=0 then exit;
+  if keyPressed then parseError:=errBreakParsing;
+  if style and stylePrintable=0 then exit;
   if (style and styleInvers<>0) or
-     (tag and tagLink<>0) then inversString(parseStr);
+     (tag and tagLink<>0) then inversString();
+  if (tag and tagHeader<>0) then uppercaseString();
   write(parseStr);
 end;
 
@@ -39,6 +48,19 @@ begin
   _callFlushBuffer:=@printMD;
   _callFetchLine:=@readLineFromFile;
   parseTag();
+  if parseError<0 then
+  begin
+    writeLn;
+    if parseError<>errEndOfDocument then
+      write(' Parse parseError: '*);
+    case parseError of
+      errEndOfDocument : writeLn('End of Document');
+      errBufferEnd     : writeLn('Buffer end');
+      errTagStackEmpty : writeLn('Tag stack is empty');
+      errTagStackFull  : writeLn('Tag stack is full');
+      errBreakParsing  : writeLn('Parse is break');
+    end;
+  end;
 end;
 
 var
@@ -52,7 +74,7 @@ begin
   if IOResult=1 then
     parseMD()
   else
-    writeLn('IO Error #',IOResult);
+    writeLn('IO parseError #',IOResult);
   cls(1);
   writeLn('Press any key...');
   ReadKey;

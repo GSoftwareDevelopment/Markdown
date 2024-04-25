@@ -2,7 +2,7 @@
   begin
     if (lineStat and statWordBegin<>0) then
     begin
-      if findChar(ch)>0 then
+      if _processChars(processFind,ch)>0 then
       begin
         removeStrChars(1);
         style:=style xor nStyle;
@@ -21,12 +21,12 @@
   begin
     if (lineStat and statWordBegin<>0) then
     begin
-      if countChars(cCODEINS)=1 then
+      if _processChars(processCount,cCODEINS)=1 then
       begin // code insert
-        if findChar(cCODEINS)>0 then
+        if _processChars(processFind,cCODEINS)>0 then
         begin
           removeStrChars(1);
-          tag:=tagCodeInsert;
+          pushTag(tagCodeInsert);
         end;
       end
     end
@@ -35,29 +35,33 @@
     begin
       dec(parseChar); _flushBuffer();
       removeStrChars(1);
-      tag:=0;
+      popTag();
     end;
   end;
 
   procedure checkREMBlock();
   begin
-    tmp:=countChars(cREM);
-    if (lineStat and StatLineBegin<>0) and (tmp=3) then
+    if (lineStat and statLineBegin<>0) then
     begin
-      removeStrChars(3);
-      if tag<>tagREM then
+      tmp:=_processChars(processCount,cREM);
+      if (tmp=3) then
       begin
-        tag:=tagREM; // style:=style and (not stylePrint);
+        removeStrChars(3);
+        if tag<>tagREM then
+        begin
+          pushTag(tagRem);
+        end
+        else
+        begin
+          popTag();
+        end;
+        style:=style xor stylePrintable;
       end
       else
+      if tag<>tagREM then
       begin
-        tag:=0; // style:=style or stylePrint;
+        dec(parseChar,tmp); ch:=parseChar^;
       end;
-      style:=style xor stylePrint;
-    end
-    else
-    begin
-      dec(parseChar,tmp-1); ch:=parseChar^;
     end;
   end;
 
@@ -65,36 +69,35 @@
   begin
     if (lineStat and statLineBegin<>0) then
     begin
-      tmp:=countChars(cCODE);
+      tmp:=_processChars(processCount,cCODE);
       if (tmp=3) then // code block
       begin
         removeStrChars(3);
         if tag<>tagCode then
         begin
-          tag:=tagCodeLanguage; style:=style and (not stylePrint);
-          findChar(cSPACE);
-          _flushBuffer();
-          tag:=tagCode; style:=style or stylePrint;
+          pushTag(tagCodeLanguage);
+          style:=style and (not stylePrintable);
         end
         else
-          tag:=0;
+          popTag();
       end
       else
       begin
-        dec(parseChar,tmp-1); ch:=parseChar^;
+        dec(parseChar,tmp); ch:=parseChar^;
       end;
     end;
   end;
 
-  procedure checkListPointed();
+  procedure checkListBullet();
   begin
     if (lineStat and statLineBegin<>0) then
     begin
-      if (findChar(cSPACE)=1) then
+      if (_processChars(processFind,cSPACE)=1) then
       begin
-        tag:=tagListPointed;
+        pushTag(tagListBullet);
         _flushBuffer();
-        tag:=tagList;
+        popTag();
+        pushTag(tagList);
       end;
     end;
   end;
@@ -103,13 +106,14 @@
   begin
     if (lineStat and statLineBegin<>0) then
     begin
-      if (checkValInt()>0) and (ch=cNUMLIST) then
+      if (_processChars(processValue,#0)>0) and (ch=cNUMLIST) then
       begin
-        if findChar(cSpace)=1 then
+        if _processChars(processFind,cSpace)=1 then
         begin
-          tag:=tagListNumbered;
+          pushTag(tagListNumbered);
           _flushBuffer();
-          tag:=tagList;
+          popTag();
+          pushTag(tagList);
         end;
       end;
     end;
@@ -119,14 +123,12 @@
   begin
     if (lineStat and statLineBegin<>0) then
     begin
-      tmp:=countChars(cHEADER);
+      tmp:=_processChars(processCount,cHEADER);
       if (tmp>0) and (tmp<=4) and (ch=cSPACE) then
       begin
         removeStrChars(tmp+1);
-        tag:=tagHeader+tmp-1;
-      end
-      else
-        tag:=0;
+        pushTag(tagHeader+tmp-1);
+      end;
     end;
   end;
 
@@ -136,10 +138,11 @@
     begin
       if tag=tagLinkDescription then
       begin
-        if (findChar(cCADDR)>0) then
+        if (_processChars(processFind,cCADDR)>0) then
         begin
           removeStrChars(1);
-          tag:=tagLinkDestination;
+          popTag();
+          pushTag(tagLinkDestination);
         end;
       end;
     end
@@ -148,7 +151,8 @@
     begin
       dec(parseChar); _flushBuffer();
       removeStrChars(1);
-      tag:=0; style:=style or stylePrint;
+      popTag();
+      style:=style or stylePrintable;
     end;
   end;
 
@@ -158,12 +162,14 @@
     begin
       if tag<>tagLinkDescription then
       begin
-        if (findChar(cCLINK)>0) then
+        tmp:=_processChars(processFind,cCLINK);
+        if (tmp>0) then
         begin
-          if (findChar(cOADDR)=1) and (findChar(cCADDR)>0) then
+          tmp:=_processChars(processFind,cOADDR)-tmp;
+          if (tmp=1) and (_processChars(processFind,cCADDR)>0) then
           begin
             removeStrChars(1);
-            tag:=tagLinkDescription;
+            pushTag(tagLinkDescription);
           end;
         end;
       end;
@@ -172,6 +178,7 @@
     if tag=tagLinkDescription then
     begin
       dec(parseChar); _flushBuffer();
-      removeStrChars(1); style:=style and (not stylePrint);
+      removeStrChars(1);
+      style:=style and (not stylePrintable);
     end;
   end;
