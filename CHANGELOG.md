@@ -1,3 +1,8 @@
+v.0.4
+- REM, CODE, CODEINSERT as block tag signature
+- block REM has new tag `<<<` `>>>`
+- new tag Image \![title](link)
+
 v.0.3
 - procedure `_callFetchData` is now a function!
   simplifies implementation of reading a data stream

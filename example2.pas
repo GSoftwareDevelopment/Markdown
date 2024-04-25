@@ -40,6 +40,7 @@ begin
   if (style and styleInvers<>0) or
      (tag and tagLink<>0) then inversString();
   if (tag and tagHeader<>0) then uppercaseString();
+  if tag=tagImageDescription then Write('img#');
   write(parseStr);
 end;
 

@@ -14,32 +14,35 @@ const
   cRETURN   = #155; // Atari new line
 
 //                     Considered state only at...
-  cESC      = '\'; // the beginning of the Word
-  cHEADER   = '#'; // the beginning of the Line
-  cOLINK    = '['; // the beginning of the Word
-  cCLINK    = ']'; // the end of the Word
-  cOADDR    = '('; // after CLINK Tag
-  cCADDR    = ')'; // the end of the CLINK Tag
-  cSINVERS  = '*'; // the beginning of the Word and at the end
-  cSUNDER   = '_'; // the beginning of the Word and at the end
-  cREM      = '-'; // the beginning of the Line (3 times)
-  cCODE     = '`'; // the beginning of the Line (3 times)
-  cCODEINS  = '`'; // the beginning of the Word (1 time)
-  cLIST     = '-'; // the beginning of the Line
-  cNUMLIST0 = '0'; // the beginning of the Line
-  cNUMLIST9 = '9'; // the beginning of the Line
-  cNUMLIST  = '.'; // the end of the first Word and if last style is NUMLISTx
+  cESC      = '\';  // the beginning of the Word
+  cHEADER   = '#';  // the beginning of the Line
+  cIMAGE    = '!';  // before OLINK Tag
+  cOLINK    = '[';  // the beginning of the Word
+  cCLINK    = ']';  // the end of the Word
+  cOADDR    = '(';  // after CLINK Tag
+  cCADDR    = ')';  // the end of the CLINK Tag
+  cSINVERS  = '*';  // the beginning of the Word and at the end
+  cSUNDER   = '_';  // the beginning of the Word and at the end
+  cOREM     = '<';  // the beginning of the Line (3 times)
+  cCREM     = '>';  // the beginning of the Line (3 times)
+  cCODE     = '`';  // the beginning of the Line (3 times)
+  cCODEINS  = '`';  // the beginning of the Word (1 time)
+  cULIST    = '-';  // the beginning of the Line
+  cOLIST0   = '0';  // the beginning of the Line
+  cOLIST9   = '9';  // the beginning of the Line
+  cOLIST    = '.';  // the end of the first Word and if last style is NUMLISTx
+  // cHRULE    = '-';  // the beginning of the Line (3 times);
 
 // tags
   tagLink               = %10000000;
   tagLinkDescription    = %10000001;
   tagLinkDestination    = %10000010;
+  tagImageDescription   = %10000011;
 
-  tagCode               = %01000000;
-  tagCodeInsert         = %01000001;
-  tagCodeLanguage       = %01000010;
-
-  tagREM                = %00100000;
+  tagBlock              = %01000000;
+  tagREM                = %01000001;
+  tagCodeInsert         = %01000010;
+  tagCodeLanguage       = %01000011;
 
   tagTable              = %00010000;
   tagTableNewCell       = %00010000;
@@ -47,8 +50,8 @@ const
   tagTableHeader        = %00010010;
 
   tagList               = %00001000;
-  tagListBullet         = %00001001; // List bullet
-  tagListNumbered       = %00001010; // List numbered
+  tagListUnordered      = %00001001;
+  tagListOrdered        = %00001010;
 
   tagHeader             = %00000100;
   tagH1                 = %00000100;  // Header level 1
@@ -112,6 +115,8 @@ const
 
 var
   tmp:Byte;
+  old:Pointer;
+  bytes:Byte;
 
 (*
 Moves the compactness of the buffer by the specified `count` number of bytes.
@@ -132,10 +137,6 @@ end;
 subcall procedure for buffer fetch
 *)
 procedure _fetchBuffer();
-var
-  old:Pointer;
-  bytes:Byte;
-
 begin
   old:=parseChar; inc(parseChar);
   bytes:=_callFetchLine();
@@ -153,17 +154,14 @@ begin
   result:=false; // false - break;
   if res=0 then
   begin
+    tmp:=parseStrLen;
     dec(parseChar); _fetchBuffer();
     if parseError=0 then
     begin
       // `tmp` value is set in parent function!
-      inc(res,parseStrLen-tmp); tmp:=parseStrLen;
+      inc(res,parseStrLen-tmp);
       result:=true; // true - buffer is refill
     end;
-  end
-  else
-  begin
-    res:=parseStrLen-res;
   end;
 end;
 
@@ -179,18 +177,19 @@ function _processChars(processType:Byte; nCh:Char):Byte;
     case processType of
       processCount: result:=(ch<>nch);
       processFind : result:=((ch=nCh) or (ch=cRETURN) or (ch=cLF));
-      processValue: result:=((ch<cNUMLIST0) or (ch>cNUMLIST9));
+      processValue: result:=((ch<cOLIST0) or (ch>cOLIST9));
     end;
   end;
 
 begin
-  tmp:=parseStrLen; result:=parseStrLen-byte(parseChar-@parseStr-1);
+  old:=parseChar; result:=parseStrLen-byte(parseChar-@parseStr-1);
   while result>0 do
   begin
     repeat
       inc(parseChar); dec(result); ch:=parseChar^;
     until (result=0) or (conditionProcessing());
-    if not _refillBuffer(result) then break;
+    if not _refillBuffer(result) then
+      exit(byte(parseChar-old));
     inc(result);
   end;
 end;
@@ -264,7 +263,7 @@ begin
       ch:=parseChar^;
       case ch of
       // white-space parse
-        cESC, cTAB:
+        cESC, cTAB, cCR:
           begin
             if (ch=cTAB) and (lineStat and statLineBegin<>0) then inc(lineIndentation);
             removeStrChars(1);
@@ -283,35 +282,32 @@ begin
             lineIndentation:=0;
             if (style and (not stylePrintable)<>0) or
                (tag and (tagList+tagHeader)<>0)  then popTag();
-            if (tag and tagCODE<>0) then
-              style:=style or stylePrintable      // only for CODE tag always set Printable
+            if (tag=tagCodeLanguage) then
+              style:=style or stylePrintable    // only for CODE tag always set Printable
             else
               style:=style and stylePrintable;  // keep only Printable style flag status
-            tag:=tag and (tagREM+tagCODE);    // keep only REM tag flag status
+            tag:=tag and tagBLOCK;    // keep only BLOCK tag flag status
             lineStat:=lineStat or (statLineBegin+statWordBegin);
             continue;
           end;
       end;
 
-      if (tag<>tagCODE) then
-        if (ch=cREM) then checkREMBlock();
+      if (ch=cOREM) or (ch=cCREM) then checkBlock(tagREM);
+      if (ch=cCODE) and (lineStat and statLineBegin<>0) then checkBlock(tagCodeLanguage);
+      if (ch=cCODEINS) then checkCodeInsert();
 
-      if (tag<>tagREM) then
-      begin
-        if (ch=cCODE) then checkCODEBlock();
-        if (ch=cCODEINS) then checkCodeInsert();
-      end;
-
-      if (tag and (tagREM + tagCODE)=0) then
+      if (tag and tagBLOCK=0) then
       begin
         case ch of
-          cSINVERS            : toggleStyle(styleInvers);
-          cSUNDER             : toggleStyle(styleUnderline);
-          cLIST               : checkListBullet();
-          cNUMLIST0..cNUMLIST9: checkListNumbered();
-          cHEADER             : checkHeader();
-          cOADDR,cCADDR       : checkLinkAddress();
-          cOLINK,cCLINK       : checkLinkDescription();
+          cSINVERS         : toggleStyle(styleInvers);
+          cSUNDER          : toggleStyle(styleUnderline);
+          cHEADER          : checkHeader();
+          cULIST           : checkListBullet();
+          // cHRULE           : checkHorizRule();
+          cOLIST0..cOLIST9 : checkListNumbered();
+          cIMAGE           : checkImage();
+          cOLINK,cCLINK    : checkLinkDescription();
+          cOADDR,cCADDR    : checkLinkAddress();
         else
           lineStat:=lineStat and not (statLineBegin+statWordBegin);
         end;
