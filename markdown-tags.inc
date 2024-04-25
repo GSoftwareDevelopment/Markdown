@@ -41,7 +41,7 @@
 
   procedure checkREMBlock();
   begin
-    if (lineStat and statLineBegin<>0) then
+    // if (lineStat and statLineBegin<>0) then
     begin
       tmp:=_processChars(processCount,cREM);
       if (tmp=3) then

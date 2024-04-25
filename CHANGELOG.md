@@ -5,6 +5,8 @@ v.0.3
 - adjustable tag stack size
 - code size and speed optimization
 - improvement of tag recognition
+- block REM works on a single line
+  However, after opening and by closing there must be a whitespace character
 
 v.0.2
 - Enhance headers from H1 to H4
