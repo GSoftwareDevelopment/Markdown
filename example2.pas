@@ -34,20 +34,49 @@ procedure printMD();
         parseStr[i]:=char(byte(parseStr[i])-32);
   end;
 
+  procedure lineString();
+  var
+    i:byte;
+
+  begin
+    for i:=1 to 40 do
+      write(#$12);
+    if isHeader(prevTag) then writeLn;
+  end;
+
 begin
   if keyPressed then parseError:=errBreakParsing;
+
+  if (lineStat and statEndOfLine<>0) and (tag=tagHorizRule) then lineString();
+  if (prevTag<>tag) and (tag=tagLinkDestination) then write(#$19);
   if style and stylePrintable=0 then exit;
   if (style and styleInvers<>0) or
-     (tag and tagLink<>0) then inversString();
-  if (tag and tagHeader<>0) then uppercaseString();
-  if tag=tagImageDescription then Write('img#');
-  write(parseStr);
+     isLink(tag) then inversString();
+  if isHeader(tag) then
+  begin
+    uppercaseString();
+    write(parseStr);
+    if lineStat and statEndOfLine<>0 then
+      lineString();
+  end
+  else
+  begin
+    if tag=tagImageDescription then Write('img#');
+    if tag=tagListUnordered then
+      write(#32#$14#32)
+    else
+    begin
+      if (prevTag<>tag) and (tag=tagLinkDescription) then write(#$99);
+      write(parseStr);
+    end;
+  end;
 end;
 
 procedure parseMD();
 begin
   _callFlushBuffer:=@printMD;
   _callFetchLine:=@readLineFromFile;
+  prevTag:=0;
   parseTag();
   if parseError<0 then
   begin
@@ -55,7 +84,7 @@ begin
     if parseError<>errEndOfDocument then
       write(' Parse parseError: '*);
     case parseError of
-      errEndOfDocument : writeLn('End of Document');
+      // errEndOfDocument : writeLn('End of Document');
       errBufferEnd     : writeLn('Buffer end');
       errTagStackEmpty : writeLn('Tag stack is empty');
       errTagStackFull  : writeLn('Tag stack is full');

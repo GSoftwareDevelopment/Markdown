@@ -1,8 +1,20 @@
+procedure _flushAndRemoveCharSetStyle(nStyle:Byte);
+begin
+  dec(parseChar); _flushBuffer();
+  removeStrChars(1);
+  style:=nStyle;
+end;
+
+procedure previosChar();
+begin
+  dec(parseChar,tmp); ch:=parseChar^;
+end;
+
 procedure toggleStyle(nStyle:Byte);
 begin
   if (lineStat and statWordBegin<>0) then
   begin
-    if _processChars(processFind,ch)>0 then
+    if _processChars(processFind,ch)>1 then
     begin
       removeStrChars(1);
       style:=style xor nStyle;
@@ -10,33 +22,7 @@ begin
   end
   else
   if (style and nStyle<>0) then
-  begin
-    dec(parseChar); _flushBuffer();
-    removeStrChars(1);
-    style:=style xor nStyle;
-  end;
-end;
-
-procedure checkCodeInsert();
-begin
-  if (lineStat and statWordBegin<>0) then
-  begin
-    if _processChars(processCount,cCODEINS)=1 then
-    begin // code insert
-      if _processChars(processFind,cCODEINS)>0 then
-      begin
-        removeStrChars(1);
-        pushTag(tagCodeInsert);
-      end;
-    end
-  end
-  else
-  if (tag=tagCodeInsert) then
-  begin
-    dec(parseChar); _flushBuffer();
-    removeStrChars(1);
-    popTag();
-  end;
+    _flushAndRemoveCharSetStyle(style xor nStyle);
 end;
 
 procedure checkBlock(nTag:Byte);
@@ -49,14 +35,14 @@ begin
       pushTag(nTag)
     else
       popTag();
+    style:=style and (not stylePrintable);  // disable Printable style
+    if tag=tagCode then                     // enable Fixed style for CODE block
+      style:=style or styleFixed;
     ch:=#0;
-    style:=style xor stylePrintable;
   end
   else
-  if (tag and tagBLOCK=0) then
-  begin
-    dec(parseChar,tmp); ch:=parseChar^;
-  end;
+  if (not isBlock(tag)) then
+    previosChar();
 end;
 
 procedure checkListBullet();
@@ -98,18 +84,18 @@ begin
     if (tmp>0) and (tmp<=4) and (ch=cSPACE) then
     begin
       removeStrChars(tmp+1);
-      pushTag(tagHeader+tmp-1);
+      pushTag(tagH1+tmp-1);
     end;
   end;
 end;
 
 procedure checkLinkAddress();
 begin
-  if ch=cOADDR then
+  if ch=cOLADDR then
   begin
     if (tag=tagLinkDescription) or (tag=tagImageDescription) then
     begin
-      if (_processChars(processFind,cCADDR)>0) then
+      if (_processChars(processFind,cCLADDR)>0) then
       begin
         removeStrChars(1);
         popTag();
@@ -120,22 +106,20 @@ begin
   else
   if tag=tagLinkDestination then
   begin
-    dec(parseChar); _flushBuffer();
-    removeStrChars(1);
+    _flushAndRemoveCharSetStyle(style or stylePrintable);
     popTag();
-    style:=style or stylePrintable;
   end;
 end;
 
 procedure checkLinkDescription();
 begin
-  if ch=cOLINK then
+  if ch=cOLDESC then
   begin
     if tag<>tagLinkDescription then
     begin
-      if (_processChars(processFind,cCLINK)>0) then
+      if (_processChars(processFind,cCLDESC)>0) then
       begin
-        if (_processChars(processFind,cOADDR)=1) and (_processChars(processFind,cCADDR)>0) then
+        if (_processChars(processFind,cOLADDR)=1) and (_processChars(processFind,cCLADDR)>0) then
         begin
           removeStrChars(1);
           pushTag(tagLinkDescription);
@@ -145,18 +129,14 @@ begin
   end
   else
   if (tag=tagLinkDescription) or (tag=tagImageDescription) then
-  begin
-    dec(parseChar); _flushBuffer();
-    removeStrChars(1);
-    style:=style and (not stylePrintable);
-  end;
+    _flushAndRemoveCharSetStyle(style and (not stylePrintable));
 end;
 
 procedure checkImage();
 begin
   if (lineStat and statWordBegin<>0) then
   begin
-    tmp:=_processChars(processFind,cOLINK);
+    tmp:=_processChars(processFind,cOLDESC);
     if (tmp=1) then
     begin
       checkLinkDescription();
@@ -168,8 +148,7 @@ begin
       end;
     end
     else
-    begin
-      dec(parseChar,tmp); ch:=parseChar^;
-    end;
+      previosChar();
   end;
 end;
+

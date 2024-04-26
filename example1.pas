@@ -13,7 +13,7 @@ The `parseMD` procedure prepares the engine variables for operation.
 *)
 
 const
-  MD:Array of char = '# Header level #1'#155'This is the text [in it link](id) and <further> text.'#155#155'And another line, and in it *text in invers* and _underline_.'#155'And here (in parentheses is the text and code insertion `inner();`)'#155'- there are also'#155'- unordered lists'#155#155'1. as well as'#155'2. ordered'#155#155'<<<'#155'comment block'#155'>>>'#155#155'```basic'#155'10 PRINT "ATARI"'#155'20 GOTO 10'#155'```'#155;
+  MD:Array of char = '# Header level #1'#155'This is the text [in it link](id) and further text.'#155#155'And another line, and in it *text in invers* and _underline_.'#155'And here (in parentheses is the text and code insertion `inner();`)'#155'- there are also'#155'- unordered lists'#155#155'1. as well as'#155'2. ordered'#155#155'<<<'#155'comment block'#155'>>>'#155#155'```basic'#155'10 PRINT "ATARI"'#155'20 GOTO 10'#155'```'#155;
 
 var
   curChar:PChar;                          // pointer to current character in MD source
@@ -51,7 +51,7 @@ procedure printMD();
 begin
   if style and stylePrintable=0 then exit;
   if (style and styleInvers<>0) or
-     (tag and tagLink<>0) then inversString(parseStr);
+     isLink(tag) then inversString(parseStr);
   write(parseStr);
 end;
 

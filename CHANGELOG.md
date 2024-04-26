@@ -1,4 +1,13 @@
+v.0.5
+
+- Changing the concept of tag format - from bit to number.
+- Tag grouping functions: `isHeader`, `isLink`, `isList`, `isBlock` - return True if the specified tag belongs to the given group.
+- New parser state `statEndOfLine` indicating the end of a line when calling the `call` function.
+- further code optimizations :)
+- An extended example of `example2.pas` showing a more advanced way of presenting text.
+
 v.0.4
+
 - REM, CODE, CODEINSERT as block tag signature
 - block REM has new tag `<<<` `>>>`
 - new tag Image \![title](link)

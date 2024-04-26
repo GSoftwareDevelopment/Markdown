@@ -7,16 +7,19 @@ Read the following information and the example file.
 ## Supports tags
 
 - *H1-H4* headers
-- *Code inserts* i.e. a single "backwards" apostrophe (the one under the tilde)
-- *Blocks of code*, including language definition
-- *REM block* (proper name) three consecutive dashes - can be used as a multi-line comment, or a block of specific data, e.g. JSON 🙂
+- *Code* - with including language definition
+- *REM block* (proper name) `<<<` … `>>>` - everything contained between these tags, has Printable style disabled.
+  It can be considered like a line or comment insertion, or with a little effort, parsed as, say, JSON
 - *Indentation* - recognizes the TAB character, but deletes it, increasing the value of `lineIndentation`
-- *Bullet lists* - dash + space
-- *Numeric lists* - number + period + space
-- *Links* - \[title](link)
+- *Unordered lists* - dash + space
+- *Ordered lists* - number + period + space
+- *Links* - `[title](link)`
+- Images - `![title](link)`
+- *Horizontal rule* - `---` Single horizontal line
 - Two styles:
-  - *Inverted* - between the asterisk characters
-  - *Underline* - between the underscore characters
+  - *Inverted* - between the asterisk `* … *` characters
+  - *Underline* - between the underscore `_ … _` characters
+  - Fixed - between the single "backwards" apostrophe ``` … ` `` 
 
 ## Features:
 
