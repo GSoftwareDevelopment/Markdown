@@ -47,27 +47,25 @@ procedure printMD();
 begin
   if keyPressed then parseError:=errBreakParsing;
 
-  if (lineStat and statEndOfLine<>0) and (tag=tagHorizRule) then lineString();
-  if (prevTag<>tag) and (tag=tagLinkDestination) then write(#$19);
-  if style and stylePrintable=0 then exit;
-  if (style and styleInvers<>0) or
-     isLink(tag) then inversString();
+  if not isStyle(stylePrintable) then exit;
+  if isStyle(styleInvers) or isLink(tag) then inversString();
   if isHeader(tag) then
   begin
     uppercaseString();
     write(parseStr);
-    if lineStat and statEndOfLine<>0 then
-      lineString();
+    if isLineEnd() then lineString();
   end
   else
   begin
-    if tag=tagImageDescription then Write('img#');
-    if tag=tagListUnordered then
+    if isBeginTag(tagHorizRule) then lineString();
+    if isBeginTag(tagImageDescription) then Write('img#');
+    if isBeginTag(tagListUnordered) then
       write(#32#$14#32)
     else
     begin
-      if (prevTag<>tag) and (tag=tagLinkDescription) then write(#$99);
+      if isBeginTag(tagLinkDescription) then write(#$99);
       write(parseStr);
+      if isEndTag(tagLinkDescription) then write(#$19);
     end;
   end;
 end;

@@ -35,6 +35,7 @@ begin
       pushTag(nTag)
     else
       popTag();
+    _flushBuffer();
     style:=style and (not stylePrintable);  // disable Printable style
     if tag=tagCode then                     // enable Fixed style for CODE block
       style:=style or styleFixed;
@@ -93,13 +94,14 @@ procedure checkLinkAddress();
 begin
   if ch=cOLADDR then
   begin
-    if (tag=tagLinkDescription) or (tag=tagImageDescription) then
+    if (tag=tagLink) then
     begin
       if (_processChars(processFind,cCLADDR)>0) then
       begin
         removeStrChars(1);
         popTag();
         pushTag(tagLinkDestination);
+        style:=style and (not stylePrintable);
       end;
     end;
   end
@@ -129,7 +131,11 @@ begin
   end
   else
   if (tag=tagLinkDescription) or (tag=tagImageDescription) then
-    _flushAndRemoveCharSetStyle(style and (not stylePrintable));
+  begin
+    _flushAndRemoveCharSetStyle(style);
+    tag:=tagLink;
+    _flushBuffer();
+  end;
 end;
 
 procedure checkImage();

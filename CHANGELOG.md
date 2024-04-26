@@ -1,7 +1,10 @@
 v.0.5
 
 - Changing the concept of tag format - from bit to number.
-- Tag grouping functions: `isHeader`, `isLink`, `isList`, `isBlock` - return True if the specified tag belongs to the given group.
+- Line functions: `isLineBegin` and `isLineEnd` - indicate `True`, for the beginning and end of the line, respectively.
+- Style function: `isStyle` - return `True` if specified style is set
+- Tag functions: `isBeginTag` and `isEndTag` - indicate `True`, for the beginning and end of the tag, respectively.
+- Tag grouping functions: `isHeader`, `isLink`, `isList`, `isBlock` - return `True` if the specified tag belongs to the given group.
 - New parser state `statEndOfLine` indicating the end of a line when calling the `call` function.
 - further code optimizations :)
 - An extended example of `example2.pas` showing a more advanced way of presenting text.

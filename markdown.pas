@@ -44,16 +44,17 @@ const
   tagBlock              = 5;
   tagREM                = 6;
   tagCode               = 7;
-  tagLinkDescription    = 8;
-  tagLinkDestination    = 9;
-  tagImageDescription   = 10;
-  tagTableNewCell       = 11;
-  tagTableNewRow        = 12;
-  tagTableHeader        = 13;
-  tagList               = 14;
-  tagListUnordered      = 15;
-  tagListOrdered        = 16;
-  tagHorizRule          = 17;
+  tagLink               = 8;
+  tagLinkDescription    = 9;
+  tagLinkDestination    = 10;
+  tagImageDescription   = 11;
+  tagTableNewCell       = 12;
+  tagTableNewRow        = 13;
+  tagTableHeader        = 14;
+  tagList               = 15;
+  tagListUnordered      = 16;
+  tagListOrdered        = 17;
+  tagHorizRule          = 18;
 
 // styles
   stylePrintable        = %10000000;  // Printable word
@@ -105,10 +106,16 @@ var
 
   parseStack:Array[0..maxParseStack] of Byte  absolute $0600;
 
+function isLineBegin():Boolean;
+function isLineEnd():Boolean;
+
+function isBeginTag(ntag:Byte):Boolean;
+function isEndTag(ntag:Byte):Boolean;
 function isHeader(nTag:Byte):Boolean;
 function isLink(nTag:Byte):Boolean;
 function isList(nTag:Byte):Boolean;
 function isBlock(nTag:Byte):Boolean;
+function isStyle(nStyle:Byte):Boolean;
 
 procedure parseTag();
 
@@ -203,6 +210,7 @@ begin
         cSPACE:
           begin
             _flushBuffer();
+            lineStat:=lineStat and (not statLineBegin);
             lineStat:=lineStat or statWordBegin;
             continue;
           end;
@@ -258,11 +266,11 @@ begin
           cOLDESC,cCLDESC    : checkLinkDescription();
           cOLADDR,cCLADDR    : checkLinkAddress();
         else
-          lineStat:=lineStat and not (statLineBegin+statWordBegin);
+          lineStat:=lineStat and not (statWordBegin);
         end;
       end
       else
-        lineStat:=lineStat and not (statLineBegin+statWordBegin);
+        lineStat:=lineStat and not (statWordBegin);
     end;
   end;
   if (parseError=0) then _flushBuffer();
