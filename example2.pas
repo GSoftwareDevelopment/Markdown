@@ -1,4 +1,9 @@
-{$DEFINE UseMacro4Ises}
+(*
+You can use macros for the `is` function.
+To do this, specify the `UseMacro4Ises` directive on the command line or
+define it in the `{$DEFINE UseMacro4Ises}` code.
+*)
+
 uses Crt, CIO, MarkDown;
 
 function readLineFromFile():Byte; stdcall;
