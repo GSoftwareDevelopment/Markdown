@@ -1,5 +1,6 @@
-v.0.5 2024-04-27
+v.0.5 ( next day ;) )
 
+- Fixing block tag support - correctly disabling and enabling Printable style
 - use of is'es in parser code
 - (test) optional use of macros for is'es, by defining the `UseMakro4Ises` directive.
 
@@ -18,7 +19,7 @@ v.0.4
 
 - REM, CODE, CODEINSERT as block tag signature
 - block REM has new tag `<<<` `>>>` and no longer requires separating spaces
-- new tag Image \![title](link)
+- new tag Image \!\[title](link)
 
 v.0.3
 - procedure `_callFetchData` is now a function!
@@ -45,7 +46,7 @@ Supports tags:
 - *Indentation* - recognizes the TAB character, but deletes it, increasing the value of lineIndentation 🙂
 - *Dot lists* - dash + space
 - *Numeric lists* - number + period + space
-- *Links* - [title](link)
+- *Links* - \[title](link)
 - Two styles:
   - *Inverted* - between the asterisk characters
   - *Underline* - between the underscore characters
@@ -64,21 +65,19 @@ except for the start of the REM and CODE block.
 
 - Each new line resets the tag and style, as long as it is not a REM or CODE block.
 
-- Block REM, like block CODE, must start at the beginning of the line. The characters
-after the tag, have the Printable style disabled, but are passed to the call procedure
-in their entirety (without splitting into words), so you can parse them on your own.
+- Block REM, like block CODE, must start at the beginning of the line. The characters after the tag, have the Printable style disabled, but are passed to the call procedure in their entirety (without splitting into words), so you can parse them on your own.
 The CODE block thus provides information about the language used.
 
-- If a tag or style is not recognized correctly, it is treated as plain text and delivered
-in that form along with the characters to the call procedure
+- If a tag or style is not recognized correctly, it is treated as plain text and delivered in that form along with the characters to the call procedure
 
 - The `lineStat` variable, when bit 7 is set, returns the parseError number in the rest of the bits.
 Current predefined parseError codes:
 - `errLineTooLong` - While fetching a line, the line buffer has reached the end, not stating EOL.
 - `errBufferEnd` - While parsing a line, the line buffer has reached the end, not asserting EOL.
+
 When bit 7 is not set, this variable contains the status of the parsed line. i.e.
-whether it is at the beginning of the line (`statLineBegin`) and whether it is at the beginning
-of the word (`statWordBegin`).
+whether it is at the beginning of the line (`statLineBegin`) and
+whether it is at the beginning of the word (`statWordBegin`).
 
 - It is possible to abort the parsing.
 From the `call` procedure, set the value of the `lineStat` variable to the predefined value `errBreakParsing`.

@@ -21,18 +21,39 @@ begin
     if (tmp=3) then
     begin
       removeStrChars(3);
-      if tag<>nTag then
-        pushTag(nTag)
+      if not isBlock then
+      begin
+        pushTag(nTag);
+        style:=style and (not stylePrintable);  // disable Printable style to the end of line
+      end
       else
+      begin
         popTag;
+        style:=style or stylePrintable;  // enablee Printable style
+      end;
       _flushBuffer;
-      style:=style and (not stylePrintable);  // disable Printable style
-      if tag=tagCode then                     // enable Fixed style for CODE block
+
+      // exception
+      if isTag(tagCode) then                     // enable Fixed style for CODE block
         style:=style or styleFixed;
+
       ch:=#0;
     end
     else
     if (not isBlock) then _previousChar(tmp);
+  end;
+end;
+
+procedure checkHeader();
+begin
+  if isLineBegin then
+  begin
+    tmp:=_processChars(processCount,cHEADER);
+    if (tmp>0) and (tmp<=8) and (ch=cSPACE) then
+    begin
+      removeStrChars(tmp+1);
+      pushTag(tagH1+tmp-1);
+    end;
   end;
 end;
 
@@ -63,19 +84,6 @@ begin
         popTag();
         pushTag(tagList);
       end;
-    end;
-  end;
-end;
-
-procedure checkHeader();
-begin
-  if isLineBegin then
-  begin
-    tmp:=_processChars(processCount,cHEADER);
-    if (tmp>0) and (tmp<=4) and (ch=cSPACE) then
-    begin
-      removeStrChars(tmp+1);
-      pushTag(tagH1+tmp-1);
     end;
   end;
 end;

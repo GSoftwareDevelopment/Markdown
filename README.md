@@ -19,7 +19,7 @@ Read the following information and the example file.
 - Two styles:
   - *Inverted* - between the asterisk `* … *` characters
   - *Underline* - between the underscore `_ … _` characters
-  - Fixed - between the single "backwards" apostrophe ``` … ` `` 
+  - Fixed - between the single "backwards" apostrophe ``` … ` ``
 
 ## Features:
 
@@ -44,17 +44,18 @@ Read the following information and the example file.
 - The `parseError` variable - when bit 7 is set, returns the parseError number in the rest of the bits.
 Current predefined parseError codes:
 
-- `errEndOfDocument`
-- `errBufferEnd`
-- `errTagStackEmpty`
-- `errTagStackFull`
-- `errBreakParsing`
+  - `errEndOfDocument`
+  - `errBufferEnd`
+  - `errTagStackEmpty`
+  - `errTagStackFull`
+  - `errBreakParsing`
 
 - The `lineStat` - this variable contains the status of the parsed line.
 
-  Whether it is at the beginning of the line (`statLineBegin`).
-
-  Whether it is at the beginning of the word (`statWordBegin`).
+  (`statWordBegin`) Whether it is at the beginning of the word
+  (`statLineBegin`) Whether it is at the beginning of the line
+  (`statEndOfLine`) Whether it is at the ending of the line
+  (`statESC`) Is there an escape character
 
 - It is possible to abort the parsing.
   From the `call` function, set the value of the `parseError` variable to the predefined value `errBreakParsing`.
@@ -82,7 +83,9 @@ The `parseMD` procedure prepares the engine variables for operation.
 
 ## example2.pas
 
-Like `example1.pas` it implements a simple Markdown document display, but the content is loaded from a file.
+This example demonstrates two aspects:
+- Loading a document from a file
+- More complex output formatting
 The call procedure named `readLineFromFile` shows an implementation of such a solution.
 It uses the full size of the buffer and allows you to read in data.
 

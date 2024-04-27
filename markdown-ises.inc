@@ -42,7 +42,7 @@ end;
 
 function isHeader(nTag:Byte):Boolean; overload;
 begin
-  result:=((nTag>=tagH1) and (nTag<=tagH4));
+  result:=((nTag>=tagH1) and (nTag<=tagH8));
 end;
 function isHeader():Boolean; overload;
 begin

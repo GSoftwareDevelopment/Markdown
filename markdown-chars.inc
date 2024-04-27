@@ -58,8 +58,12 @@ end;
 
 procedure _flushAndRemoveCharSetStyle(nStyle:Byte);
 begin
-  dec(parseChar); _flushBuffer;
-  removeStrChars(1);
+  if parseChar>@parseStr then
+  begin
+    dec(parseChar);
+    _flushBuffer;
+    removeStrChars(1);
+  end;
   style:=nStyle;
 end;
 

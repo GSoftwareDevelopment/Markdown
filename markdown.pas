@@ -37,21 +37,27 @@ const
   tagH2                 = 2;
   tagH3                 = 3;
   tagH4                 = 4;
+  tagH5                 = 5;
+  tagH6                 = 6;
+  tagH7                 = 7;
+  tagH8                 = 8;
 
-  tagBlock              = 5;
-  tagREM                = 6;
-  tagCode               = 7;
-  tagLink               = 8;
-  tagLinkDescription    = 9;
-  tagLinkDestination    = 10;
-  tagImageDescription   = 11;
-  tagTableNewCell       = 12;
-  tagTableNewRow        = 13;
-  tagTableHeader        = 14;
-  tagList               = 15;
-  tagListUnordered      = 16;
-  tagListOrdered        = 17;
-  tagHorizRule          = 18;
+  tagBlock              = 9;
+  tagREM                = 10;
+  tagCode               = 11;
+  tagLink               = 12;
+  tagLinkDescription    = 13;
+  tagLinkDestination    = 14;
+  tagImageDescription   = 15;
+  tagTableNewCell       = 16;
+  tagTableNewRow        = 17;
+  tagTableHeader        = 18;
+  tagList               = 19;
+  tagListUnordered      = 20;
+  tagListOrdered        = 21;
+  tagHorizRule          = 22;
+
+  tagNull               = 255;
 
 // styles
   stylePrintable        = %10000000;  // Printable word
@@ -64,6 +70,7 @@ const
   statEndOfLine         = %10000000;
   statLineBegin         = %01000000;
   statWordBegin         = %00100000;
+  statESC               = %00010000;
 
 // errors
   errEndOfDocument      = -128;
@@ -198,7 +205,7 @@ begin
   parseError:=0;
   lineIndentation:=0;
   parseStackPos:=0;
-  tag:=tagNormal;
+  tag:=tagNormal; prevTag:=tagNull;
   style:=stylePrintable;
   parseChar:=@parseStr;
   lineStat:=statLineBegin+statWordBegin;
@@ -211,12 +218,24 @@ begin
     while (parseError=0) and (parseStrLen>0) and (byte(parseChar-@parseStr)<parseStrLen) do
     begin
       inc(parseChar); ch:=parseChar^;
+      if lineStat and statESC<>0 then
+      begin
+        _flushBuffer;
+        lineStat:=lineStat and (not statESC);
+        continue;
+      end;
       case ch of
       // white-space characters parse
         cESC, cTAB, cCR:
           begin
             if isLineBegin and (ch=cTAB) then inc(lineIndentation);
-            removeStrChars(1);
+            if ch=cESC then
+            begin
+              _flushAndRemoveCharSetStyle(style);
+              lineStat:=lineStat or statESC;
+            end
+            else
+              removeStrChars(1);
             continue;
           end;
         cSPACE:
@@ -255,7 +274,7 @@ begin
       if (ch=cOREM) or (ch=cCREM) then checkBlock(tagREM);
       if (ch=cCODE) then checkBlock(tagCode);
 
-      if (not isBlock(tag)) then
+      if (not isBlock) then
       begin
         if ch=cHRULE then checkBlock(tagHorizRule);
         case ch of
@@ -269,11 +288,11 @@ begin
           cULIST           : checkListUnordered();
           cOLIST0..cOLIST9 : checkListOrdered();
         else
-          lineStat:=lineStat and not (statWordBegin);
+          lineStat:=lineStat and (not (statLineBegin+statWordBegin));
         end;
       end
       else
-        lineStat:=lineStat and not (statWordBegin);
+        lineStat:=lineStat and (not (statLineBegin+statWordBegin));
     end;
   end;
   if (parseError=0) then _flushBuffer();
