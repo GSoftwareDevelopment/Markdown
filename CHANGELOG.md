@@ -17,7 +17,7 @@ v.0.5
 v.0.4
 
 - REM, CODE, CODEINSERT as block tag signature
-- block REM has new tag `<<<` `>>>`
+- block REM has new tag `<<<` `>>>` and no longer requires separating spaces
 - new tag Image \![title](link)
 
 v.0.3
