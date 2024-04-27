@@ -1,3 +1,8 @@
+v.0.5 2024-04-27
+
+- use of is'es in parser code
+- (test) optional use of macros for is'es, by defining the `UseMakro4Ises` directive.
+
 v.0.5
 
 - Changing the concept of tag format - from bit to number.
