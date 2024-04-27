@@ -1,8 +1,5 @@
 unit MarkDown;
 
-(*
-*)
-
 interface
 const
   maxParseStack = 7;  // count from 0 to this value
@@ -85,8 +82,6 @@ type
   TFetchData=function():Byte;
 
 var
-  _callFlushBuffer:TDrawProc;
-  _callFetchLine:TFetchData;
 
   parseStr:String                             absolute __BUFFER;  // line buffer
   parseStrLen:Byte                            absolute __BUFFER;  // line length
@@ -103,19 +98,36 @@ var
   parseError:Shortint                         absolute $F7;
   parseChar:PChar                             absolute $F8;       // pointer to current character in buffer
 
+  _callFlushBuffer:TDrawProc                  absolute $FA;
+  _callFetchLine:TFetchData                   absolute $FC;
 
   parseStack:Array[0..maxParseStack] of Byte  absolute $0600;
+
+{$IFDEF UseMacro4Ises}
+
+{$I 'markdown-ises.inc'}
+
+{$ELSE}
 
 function isLineBegin():Boolean;
 function isLineEnd():Boolean;
 
 function isBeginTag(ntag:Byte):Boolean;
 function isEndTag(ntag:Byte):Boolean;
-function isHeader(nTag:Byte):Boolean;
-function isLink(nTag:Byte):Boolean;
-function isList(nTag:Byte):Boolean;
-function isBlock(nTag:Byte):Boolean;
+
+function isHeader(nTag:Byte):Boolean; overload;
+function isLink(nTag:Byte):Boolean; overload;
+function isList(nTag:Byte):Boolean; overload;
+function isBlock(nTag:Byte):Boolean; overload;
+
+function isHeader():Boolean; overload;
+function isLink():Boolean; overload;
+function isList():Boolean; overload;
+function isBlock():Boolean; overload;
+
 function isStyle(nStyle:Byte):Boolean;
+
+{$ENDIF}
 
 procedure parseTag();
 
@@ -134,9 +146,10 @@ var
 //
 //
 
-{$I 'markdown-istag.inc'}
+{$I 'markdown-ises.inc'}
 
 procedure _fetchBuffer(); forward;
+procedure _flushBuffer(); forward;
 
 {$I 'markdown-stack.inc'}
 {$I 'markdown-chars.inc'}
@@ -159,15 +172,15 @@ Flush the buffer - by calling the `call` procedure - to the location pointed to 
 *)
 procedure _flushBuffer();
 var
-  oldPSLen,len:Byte;
+  oldPSLen:Byte;
 
 begin
   oldPSLen:=parseStrLen;
-  len:=byte(parseChar-@parseStr);
-  parseStrLen:=len; _callFlushBuffer(); parseStrLen:=oldPSLen;
+  bytes:=byte(parseChar-@parseStr);
+  parseStrLen:=bytes; _callFlushBuffer(); parseStrLen:=oldPSLen;
   prevTag:=tag;
   if parseStrLen=0 then exit;
-  removeStrChars(len);
+  removeStrChars(bytes);
 end;
 
 //
@@ -197,13 +210,12 @@ begin
     // parse line
     while (parseError=0) and (parseStrLen>0) and (byte(parseChar-@parseStr)<parseStrLen) do
     begin
-      inc(parseChar);
-      ch:=parseChar^;
+      inc(parseChar); ch:=parseChar^;
       case ch of
       // white-space characters parse
         cESC, cTAB, cCR:
           begin
-            if (ch=cTAB) and (lineStat and statLineBegin<>0) then inc(lineIndentation);
+            if isLineBegin and (ch=cTAB) then inc(lineIndentation);
             removeStrChars(1);
             continue;
           end;
@@ -223,23 +235,14 @@ begin
             // always clear indentation
             lineIndentation:=0;
 
-            if isList(tag) or isHeader(tag) then
-              // after List and Header tag always back to parent tag
-              popTag();
+            // after List and Header tag always back to parent tag
+            if isList or isHeader then popTag();
 
-            // if (tag=tagBlock) then
-            //   // keep Fixed style for block (Code block)
-            //   style:=style and (not styleFixed) or (style and styleFixed);
-
-            if (tag=tagCode) then
-              // only for CODE tag always set Printable
-              style:=style or stylePrintable;
-            // else
+            // only for CODE tag always set Printable
+            if isTag(tagCode) then style:=style or stylePrintable;
             //   // keep only Printable style flag status
-            //   style:=style and (not stylePrintable) or (style and stylePrintable);
-
             // keep only BLOCK tag
-            if isBlock(tag) then
+            if isBlock then
               tag:=tagBlock // tag:=tag and tagBLOCK;
             else
               tag:=tagNormal;
@@ -250,7 +253,7 @@ begin
       end;
 
       if (ch=cOREM) or (ch=cCREM) then checkBlock(tagREM);
-      if (ch=cCODE) and (lineStat and statLineBegin<>0) then checkBlock(tagCode);
+      if (ch=cCODE) then checkBlock(tagCode);
 
       if (not isBlock(tag)) then
       begin
@@ -259,12 +262,12 @@ begin
           cSINVERS         : toggleStyle(styleInvers);
           cSUNDER          : toggleStyle(styleUnderline);
           cSFIXED          : toggleStyle(styleFixed);
-          cHEADER          : checkHeader();
-          cULIST           : checkListBullet();
-          cOLIST0..cOLIST9 : checkListNumbered();
           cIMAGE           : checkImage();
-          cOLDESC,cCLDESC    : checkLinkDescription();
-          cOLADDR,cCLADDR    : checkLinkAddress();
+          cOLDESC,cCLDESC  : checkLinkDescription();
+          cOLADDR,cCLADDR  : checkLinkAddress();
+          cHEADER          : checkHeader();
+          cULIST           : checkListUnordered();
+          cOLIST0..cOLIST9 : checkListOrdered();
         else
           lineStat:=lineStat and not (statWordBegin);
         end;

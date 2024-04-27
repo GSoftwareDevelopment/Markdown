@@ -53,3 +53,17 @@ begin
     inc(result);
   end;
 end;
+
+//
+
+procedure _flushAndRemoveCharSetStyle(nStyle:Byte);
+begin
+  dec(parseChar); _flushBuffer;
+  removeStrChars(1);
+  style:=nStyle;
+end;
+
+procedure _previousChar(back:Byte);
+begin
+  dec(parseChar,back); ch:=parseChar^;
+end;

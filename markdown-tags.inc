@@ -1,18 +1,6 @@
-procedure _flushAndRemoveCharSetStyle(nStyle:Byte);
-begin
-  dec(parseChar); _flushBuffer();
-  removeStrChars(1);
-  style:=nStyle;
-end;
-
-procedure previosChar();
-begin
-  dec(parseChar,tmp); ch:=parseChar^;
-end;
-
 procedure toggleStyle(nStyle:Byte);
 begin
-  if (lineStat and statWordBegin<>0) then
+  if isWordBegin then
   begin
     if _processChars(processFind,ch)>1 then
     begin
@@ -21,34 +9,36 @@ begin
     end;
   end
   else
-  if (style and nStyle<>0) then
+  if isStyle(nStyle) then
     _flushAndRemoveCharSetStyle(style xor nStyle);
 end;
 
 procedure checkBlock(nTag:Byte);
 begin
-  tmp:=_processChars(processCount,ch);
-  if (tmp=3) then
+  if isLineBegin then
   begin
-    removeStrChars(3);
-    if tag<>nTag then
-      pushTag(nTag)
+    tmp:=_processChars(processCount,ch);
+    if (tmp=3) then
+    begin
+      removeStrChars(3);
+      if tag<>nTag then
+        pushTag(nTag)
+      else
+        popTag;
+      _flushBuffer;
+      style:=style and (not stylePrintable);  // disable Printable style
+      if tag=tagCode then                     // enable Fixed style for CODE block
+        style:=style or styleFixed;
+      ch:=#0;
+    end
     else
-      popTag();
-    _flushBuffer();
-    style:=style and (not stylePrintable);  // disable Printable style
-    if tag=tagCode then                     // enable Fixed style for CODE block
-      style:=style or styleFixed;
-    ch:=#0;
-  end
-  else
-  if (not isBlock(tag)) then
-    previosChar();
+    if (not isBlock) then _previousChar(tmp);
+  end;
 end;
 
-procedure checkListBullet();
+procedure checkListUnordered();
 begin
-  if (lineStat and statLineBegin<>0) then
+  if isLineBegin then
   begin
     if (_processChars(processFind,cSPACE)=1) then
     begin
@@ -60,9 +50,9 @@ begin
   end;
 end;
 
-procedure checkListNumbered();
+procedure checkListOrdered();
 begin
-  if (lineStat and statLineBegin<>0) then
+  if isLineBegin then
   begin
     if (_processChars(processValue,#0)>0) and (ch=cOLIST) then
     begin
@@ -79,7 +69,7 @@ end;
 
 procedure checkHeader();
 begin
-  if (lineStat and statLineBegin<>0) then
+  if isLineBegin then
   begin
     tmp:=_processChars(processCount,cHEADER);
     if (tmp>0) and (tmp<=4) and (ch=cSPACE) then
@@ -92,9 +82,9 @@ end;
 
 procedure checkLinkAddress();
 begin
-  if ch=cOLADDR then
+  if isLink then
   begin
-    if (tag=tagLink) then
+    if ch=cOLADDR then
     begin
       if (_processChars(processFind,cCLADDR)>0) then
       begin
@@ -103,21 +93,20 @@ begin
         pushTag(tagLinkDestination);
         style:=style and (not stylePrintable);
       end;
+    end
+    else
+    begin
+      _flushAndRemoveCharSetStyle(style or stylePrintable);
+      popTag();
     end;
-  end
-  else
-  if tag=tagLinkDestination then
-  begin
-    _flushAndRemoveCharSetStyle(style or stylePrintable);
-    popTag();
   end;
 end;
 
 procedure checkLinkDescription();
 begin
-  if ch=cOLDESC then
+  if not isLink then
   begin
-    if tag<>tagLinkDescription then
+    if ch=cOLDESC then
     begin
       if (_processChars(processFind,cCLDESC)>0) then
       begin
@@ -130,7 +119,6 @@ begin
     end;
   end
   else
-  if (tag=tagLinkDescription) or (tag=tagImageDescription) then
   begin
     _flushAndRemoveCharSetStyle(style);
     tag:=tagLink;
@@ -140,13 +128,13 @@ end;
 
 procedure checkImage();
 begin
-  if (lineStat and statWordBegin<>0) then
+  if isWordBegin then
   begin
     tmp:=_processChars(processFind,cOLDESC);
     if (tmp=1) then
     begin
       checkLinkDescription();
-      if tag=tagLINKDescription then
+      if isLink then
       begin
         removeStrChars(1);
         popTag();
@@ -154,7 +142,7 @@ begin
       end;
     end
     else
-      previosChar();
+      _previousChar(tmp);
   end;
 end;
 

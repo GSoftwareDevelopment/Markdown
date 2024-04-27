@@ -1,3 +1,4 @@
+{$DEFINE UseMacro4Ises}
 uses Crt, CIO, MarkDown;
 
 function readLineFromFile():Byte; stdcall;
@@ -7,9 +8,8 @@ begin
     if (parseStrLen+result<256) then
     begin
       bget(1,parseChar,result);
-      result:=peek($358); // #1 - LSB of readed bytes
+      result:=peek($358); // IO channel #1 - LSB of readed bytes
       if result=0 then parseError:=errEndOfDocument;
-      // inc(parseStrLen,blockLen);
     end;
 end;
 
@@ -47,26 +47,21 @@ procedure printMD();
 begin
   if keyPressed then parseError:=errBreakParsing;
 
-  if not isStyle(stylePrintable) then exit;
-  if isStyle(styleInvers) or isLink(tag) then inversString();
-  if isHeader(tag) then
+  if isStyle(stylePrintable) then
   begin
-    uppercaseString();
-    write(parseStr);
-    if isLineEnd() then lineString();
-  end
-  else
-  begin
-    if isBeginTag(tagHorizRule) then lineString();
+    if isStyle(styleInvers) or isLink then inversString;
+
     if isBeginTag(tagImageDescription) then Write('img#');
     if isBeginTag(tagListUnordered) then
       write(#32#$14#32)
     else
     begin
       if isBeginTag(tagLinkDescription) then write(#$99);
+      if isHeader then uppercaseString;
       write(parseStr);
       if isEndTag(tagLinkDescription) then write(#$19);
     end;
+    if (isLineEnd and isHeader) or isBeginTag(tagHorizRule) then lineString;
   end;
 end;
 
@@ -75,7 +70,7 @@ begin
   _callFlushBuffer:=@printMD;
   _callFetchLine:=@readLineFromFile;
   prevTag:=0;
-  parseTag();
+  parseTag;
   if parseError<0 then
   begin
     writeLn;
