@@ -53,6 +53,7 @@ begin
   if (style and styleInvers<>0) or
      isLink(tag) then inversString(parseStr);
   write(parseStr);
+  if isLineEnd then writeLn;
 end;
 
 procedure parseMD(startMDPtr,endMDPtr:Pointer);
@@ -61,7 +62,7 @@ begin
   _callFetchLine:=@getLine;
   curChar:=startMDPtr;
   endPtr:=endMDPtr;
-  parseTag();
+  parseMarkdown(0);
 end;
 
 begin
