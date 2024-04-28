@@ -261,7 +261,10 @@ begin
                 _removeChars(tmp-1);
               end
               else
+              begin
+                _previousChar(1);
                 _flushBuffer;
+              end;
             end;
             continue;
           end;

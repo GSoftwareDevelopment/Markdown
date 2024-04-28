@@ -12,6 +12,7 @@ v.0.5 ( next day, and next day ;) )
   Every two consecutive spaces at the beginning of a line, define one level of indentation.
   _Note! The indentations are not sent by the procedure `call`._
 - removing redundant spaces - add `statRedundantSpaces` as a call parameter to the `parseMarkDown()` procedure
+- example2.pas - document formatting with indentation for lists and moving an uncompressed word to a new line.
 
 v.0.5
 
