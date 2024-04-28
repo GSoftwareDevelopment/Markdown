@@ -4,7 +4,7 @@ NOTE: The operation is performed from the beginning of the buffer!
       The position pointer in the buffer is set to the beginning of the buffer.
       The size of the buffer is also updated.
 *)
-procedure removeStrChars(count:Byte);
+procedure _removeChars(count:Byte);
 begin
   if count=0 then exit;
   dec(parseStrLen,count);
@@ -56,18 +56,30 @@ end;
 
 //
 
-procedure _flushAndRemoveCharSetStyle(nStyle:Byte);
+procedure _changeStyle(nStyle:Byte); inline;
+begin
+  style:=nStyle;
+end;
+
+procedure _nextChar(next:Byte);
+begin
+    inc(parseChar,next); ch:=parseChar^;
+end;
+
+procedure _previousChar(back:Byte);
+begin
+  if parseChar>@parseStr then
+  begin
+    dec(parseChar,back); ch:=parseChar^;
+  end;
+end;
+
+procedure _flushAndRemoveChar();
 begin
   if parseChar>@parseStr then
   begin
     dec(parseChar);
     _flushBuffer;
-    removeStrChars(1);
+    _removeChars(1);
   end;
-  style:=nStyle;
-end;
-
-procedure _previousChar(back:Byte);
-begin
-  dec(parseChar,back); ch:=parseChar^;
 end;

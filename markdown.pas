@@ -8,6 +8,7 @@ const
   cLF       = #10;  // new line
   cCR       = #13;  // combine with cLF is new line
   cSPACE    = #32;
+  cBACKSPACE= #126;
   cRETURN   = #155; // Atari new line
 
 //                     Considered state only at...
@@ -71,6 +72,7 @@ const
   statLineBegin         = %01000000;
   statWordBegin         = %00100000;
   statESC               = %00010000;
+  statRedundantSpace    = %00001000;
 
 // errors
   errEndOfDocument      = -128;
@@ -136,7 +138,7 @@ function isStyle(nStyle:Byte):Boolean;
 
 {$ENDIF}
 
-procedure parseTag();
+procedure parseMarkdown(setup:byte);
 
 implementation
 const
@@ -187,14 +189,14 @@ begin
   parseStrLen:=bytes; _callFlushBuffer(); parseStrLen:=oldPSLen;
   prevTag:=tag;
   if parseStrLen=0 then exit;
-  removeStrChars(bytes);
+  _removeChars(bytes);
 end;
 
 //
 //
 //
 
-procedure parseTag();
+procedure parseMarkdown(setup:byte);
 var
   tmp:Byte;
 
@@ -205,14 +207,14 @@ begin
   parseError:=0;
   lineIndentation:=0;
   parseStackPos:=0;
-  tag:=tagNormal; prevTag:=tagNull;
+  tag:=tagNormal; prevTag:=tagNormal;
   style:=stylePrintable;
   parseChar:=@parseStr;
-  lineStat:=statLineBegin+statWordBegin;
+  lineStat:=statLineBegin+statWordBegin or setup;
 
   while (parseError=0) do
   begin
-    _fetchBuffer();
+    _fetchBuffer;
 
     // parse line
     while (parseError=0) and (parseStrLen>0) and (byte(parseChar-@parseStr)<parseStrLen) do
@@ -224,41 +226,58 @@ begin
         lineStat:=lineStat and (not statESC);
         continue;
       end;
+      // lineStat:=lineStat and (not statIsTag);
       case ch of
       // white-space characters parse
-        cESC, cTAB, cCR:
+        cTAB, cCR, cESC, cBACKSPACE:
           begin
             if isLineBegin and (ch=cTAB) then inc(lineIndentation);
             if ch=cESC then
             begin
-              _flushAndRemoveCharSetStyle(style);
+              _flushAndRemoveChar;
               lineStat:=lineStat or statESC;
             end
             else
-              removeStrChars(1);
+              _removeChars(1);
             continue;
           end;
         cSPACE:
           begin
-            _flushBuffer();
-            lineStat:=lineStat and (not statLineBegin);
-            lineStat:=lineStat or statWordBegin;
+            tmp:=_processChars(processCount,ch);
+            if isLineBegin and (tmp>1) then
+            begin
+              inc(lineIndentation,tmp div 2);
+              _removeChars(tmp);
+              _flushBuffer;
+            end
+            else
+            begin
+              lineStat:=lineStat and (not statLineBegin);
+              lineStat:=lineStat or statWordBegin;
+              if lineStat and statRedundantSpace<>0 then
+              begin
+                _previousChar(tmp);
+                _flushBuffer;
+                _removeChars(tmp-1);
+              end
+              else
+                _flushBuffer;
+            end;
             continue;
           end;
         cRETURN,cLF:
           begin
             lineStat:=lineStat or statEndOfLine;
             if ch=cLF then begin ch:=cRETURN; parseChar^:=ch; end;
-            _flushBuffer();
+            _flushAndRemoveChar;
 
-            // always clear indentation
             lineIndentation:=0;
 
             // after List and Header tag always back to parent tag
-            if isList or isHeader then popTag();
+            if isList or isHeader or isTag(tagHorizRule) then popTag;
 
             // only for CODE tag always set Printable
-            if isTag(tagCode) then style:=style or stylePrintable;
+            if isTag(tagCode) then _changeStyle(style or stylePrintable);
             //   // keep only Printable style flag status
             // keep only BLOCK tag
             if isBlock then
@@ -266,17 +285,17 @@ begin
             else
               tag:=tagNormal;
 
-            lineStat:=(statLineBegin+statWordBegin);
+            lineStat:=lineStat and (statRedundantSpace) or (statLineBegin+statWordBegin);
             continue;
           end;
       end;
 
       if (ch=cOREM) or (ch=cCREM) then checkBlock(tagREM);
-      if (ch=cCODE) then checkBlock(tagCode);
+      if isLineBegin and (ch=cCODE) then checkBlock(tagCode);
 
       if (not isBlock) then
       begin
-        if ch=cHRULE then checkBlock(tagHorizRule);
+        if isLineBegin and (ch=cHRULE) then checkBlock(tagHorizRule);
         case ch of
           cSINVERS         : toggleStyle(styleInvers);
           cSUNDER          : toggleStyle(styleUnderline);
@@ -287,12 +306,11 @@ begin
           cHEADER          : checkHeader();
           cULIST           : checkListUnordered();
           cOLIST0..cOLIST9 : checkListOrdered();
-        else
-          lineStat:=lineStat and (not (statLineBegin+statWordBegin));
         end;
-      end
-      else
-        lineStat:=lineStat and (not (statLineBegin+statWordBegin));
+        // if (lineStat and statIsTag<>0) then continue;
+        if (tag<>prevTag) then continue;
+      end;
+      lineStat:=lineStat and (not (statLineBegin+statWordBegin));
     end;
   end;
   if (parseError=0) then _flushBuffer();

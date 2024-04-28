@@ -52,10 +52,11 @@ Current predefined parseError codes:
 
 - The `lineStat` - this variable contains the status of the parsed line.
 
-  (`statWordBegin`) Whether it is at the beginning of the word
-  (`statLineBegin`) Whether it is at the beginning of the line
-  (`statEndOfLine`) Whether it is at the ending of the line
-  (`statESC`) Is there an escape character
+  - `statWordBegin` - Whether it is at the beginning of the word
+  - `statLineBegin` - Whether it is at the beginning of the line
+  - `statEndOfLine` - Whether it is at the ending of the line
+  - `statESC` - Is there an escape character
+  - `statRedundantSpaces` - removing redundant spaces flag
 
 - It is possible to abort the parsing.
   From the `call` function, set the value of the `parseError` variable to the predefined value `errBreakParsing`.

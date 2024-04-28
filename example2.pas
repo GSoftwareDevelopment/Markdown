@@ -19,34 +19,80 @@ begin
 end;
 
 procedure printMD();
+var
+  curX:Byte;
+  i:byte;
 
   procedure inversString();
-  var
-    i:byte;
-
   begin
     for i:=1 to length(parseStr) do
       parseStr[i]:=char(byte(parseStr[i]) or $80);
   end;
 
   procedure uppercaseString();
-  var
-    i:byte;
-
   begin
     for i:=1 to length(parseStr) do
       if (parseStr[i]>=#97) and (parseStr[i]<=#122) then
         parseStr[i]:=char(byte(parseStr[i])-32);
   end;
 
+  procedure charString(cnt:shortint; ch:Char);
+  begin
+    inc(curX,cnt);
+    while cnt>0 do
+    begin
+      write(ch); dec(cnt);
+    end;
+  end;
+
   procedure lineString();
+  begin
+    charString(40,#$12);
+    if isHeader(prevTag) then writeLn;
+  end;
+
+  procedure newLine();
+  begin
+    if curX<40 then writeLn;
+    curX:=0;
+  end;
+
+  procedure putIndent();
+  begin
+    if isList then charString(2,#32);
+    charString(lineIndentation*2,#32);
+  end;
+
+  procedure print();
   var
-    i:byte;
+    ch:Char;
+    s:String[40];
+    len:Byte;
 
   begin
-    for i:=1 to 40 do
-      write(#$12);
-    if isHeader(prevTag) then writeLn;
+    len:=length(parseStr);
+    if len=0 then exit;
+    ch:=parseStr[len];
+    if (ch=cSPACE) then dec(len);
+    if (byte(curX+len)>39) then
+    begin
+      newLine; putIndent;
+    end;
+    if len>0 then
+    begin
+      s[0]:=char(len);
+      move(@parseStr+1,@s+1,len);
+      write(s);
+    end;
+    if ch=cSPACE then begin write(cSPACE); inc(len); end;
+    inc(curX,len);
+  end;
+
+  procedure putC(ch:Char);
+  begin
+    if (curX>39) then newLine;
+    write(ch);
+    inc(curX);
   end;
 
 begin
@@ -58,13 +104,17 @@ begin
 
     if isBeginTag(tagImageDescription) then Write('img#');
     if isBeginTag(tagListUnordered) then
-      write(#32#$14#32)
+    begin
+      putC(#$14); putC(#32);
+    end
     else
     begin
-      if isBeginTag(tagLinkDescription) then write(#$99);
+      if isBeginTag(tagLinkDescription) then putC(#$99);
       if isHeader then uppercaseString;
-      write(parseStr);
-      if isEndTag(tagLinkDescription) then write(#$19);
+      if isLineBegin and (lineIndentation>0) then putIndent;
+      print;
+      if isEndTag(tagLinkDescription) then putC(#$19);
+      if isLineEnd then newLine;
     end;
     if (isLineEnd and isHeader) or isBeginTag(tagHorizRule) then lineString;
   end;
@@ -75,7 +125,7 @@ begin
   _callFlushBuffer:=@printMD;
   _callFetchLine:=@readLineFromFile;
   prevTag:=0;
-  parseTag;
+  parseMarkdown(statRedundantSpace);
   if parseError<0 then
   begin
     writeLn;
@@ -102,7 +152,7 @@ begin
   if IOResult=1 then
     parseMD()
   else
-    writeLn('IO parseError #',IOResult);
+    writeLn('IO error #',IOResult);
   cls(1);
   writeLn('Press any key...');
   ReadKey;
