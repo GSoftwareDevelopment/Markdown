@@ -29,7 +29,7 @@ begin
   if cnt>255 then cnt:=255;
   if cnt>0 then
   begin
-    move(curChar,parseChar,cnt);
+    move(curChar,parseBufPtr,cnt);
     inc(curChar,cnt);
   end;
   result:=cnt;
@@ -50,8 +50,7 @@ procedure printMD();
 
 begin
   if style and stylePrintable=0 then exit;
-  if (style and styleInvers<>0) or
-     isLink(tag) then inversString(parseStr);
+  if (style and styleInvers<>0) or isLink then inversString(parseStr);
   write(parseStr);
   if isLineEnd then writeLn;
 end;

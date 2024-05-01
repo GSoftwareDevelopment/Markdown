@@ -10,7 +10,7 @@ begin
   dec(parseStrLen,count);
   move(@parseStr+count+1,@parseStr+1,parseStrLen);  //
   // FillChar(@parseStr+parseStrLen+1,count,0);     // clear unused chunk of buffer
-  parseChar:=@parseStr;
+  parseBufPtr:=@parseStr;
 end;
 
 // subfunction to processing characters in buffer
@@ -23,24 +23,24 @@ function _processChars(processType:Byte; nCh:Char):Byte;
   function conditionProcessing():Boolean;
   begin
     case processType of
-      processCount: result:=(ch<>nch);
-      processFind : result:=((ch=nCh) or (ch=cRETURN) or (ch=cLF));
-      processValue: result:=((ch<cOLIST0) or (ch>cOLIST9));
+      processCount: result:=(parseLastChar<>nch);
+      processFind : result:=((parseLastChar=nCh) or (parseLastChar=cRETURN) or (parseLastChar=cLF));
+      processValue: result:=((parseLastChar<cOLIST0) or (parseLastChar>cOLIST9));
     end;
   end;
 
 begin
-  old:=parseChar; result:=parseStrLen-byte(parseChar-@parseStr-1);
+  old:=parseBufPtr; result:=parseStrLen-byte(parseBufPtr-@parseStr-1);
   while result>0 do
   begin
     repeat
-      inc(parseChar); dec(result); ch:=parseChar^;
+      inc(parseBufPtr); dec(result); parseLastChar:=parseBufPtr^;
     until (result=0) or (conditionProcessing());
 
     if result=0 then
     begin
       tmp:=parseStrLen;
-      dec(parseChar); _fetchBuffer();
+      dec(parseBufPtr); _fetchBuffer();
       if parseError=0 then
       begin
         // `tmp` value is set in parent function!
@@ -48,7 +48,7 @@ begin
       end;
     end
     else
-      exit(byte(parseChar-old));
+      exit(byte(parseBufPtr-old));
 
     inc(result);
   end;
@@ -63,22 +63,22 @@ end;
 
 procedure _nextChar(next:Byte);
 begin
-    inc(parseChar,next); ch:=parseChar^;
+    inc(parseBufPtr,next); parseLastChar:=parseBufPtr^;
 end;
 
 procedure _previousChar(back:Byte);
 begin
-  if parseChar>@parseStr then
+  if parseBufPtr>@parseStr then
   begin
-    dec(parseChar,back); ch:=parseChar^;
+    dec(parseBufPtr,back); parseLastChar:=parseBufPtr^;
   end;
 end;
 
 procedure _flushAndRemoveChar();
 begin
-  if parseChar>@parseStr then
+  if parseBufPtr>@parseStr then
   begin
-    dec(parseChar);
+    dec(parseBufPtr);
     _flushBuffer;
     _removeChars(1);
   end;

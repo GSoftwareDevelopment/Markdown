@@ -12,15 +12,15 @@ begin
   if (result>0) then
     if (parseStrLen+result<256) then
     begin
-      bget(1,parseChar,result);
+      bget(1,parseBufPtr,result);
       result:=peek($358); // IO channel #1 - LSB of readed bytes
       if result=0 then parseError:=errEndOfDocument;
     end;
 end;
 
-procedure printMD();
+function printMD():Byte; stdcall;
 var
-  curX:Byte;
+  lastX:Byte;
   i:byte;
 
   procedure inversString();
@@ -38,23 +38,25 @@ var
 
   procedure charString(cnt:shortint; ch:Char);
   begin
-    inc(curX,cnt);
     while cnt>0 do
     begin
       write(ch); dec(cnt);
     end;
   end;
 
-  procedure lineString();
-  begin
-    charString(40,#$12);
-    if isHeader(prevTag) then writeLn;
-  end;
-
   procedure newLine();
   begin
-    if curX<40 then writeLn;
-    curX:=0;
+    lastX:=whereX; writeLn;
+  end;
+
+  procedure lineString();
+  begin
+    if not isHeader then
+      charString(screenWidth+1,#$12)
+    else
+    begin
+      charString(lastX-1,#$0D); newLine;
+    end;
   end;
 
   procedure putIndent();
@@ -64,45 +66,35 @@ var
   end;
 
   procedure print();
-  var
-    ch:Char;
-    s:String[40];
-    len:Byte;
-
   begin
-    len:=length(parseStr);
-    if len=0 then exit;
-    ch:=parseStr[len];
-    if (ch=cSPACE) then dec(len);
-    if (byte(curX+len)>39) then
+    if parseStrLen=0 then exit;
+    if (parseLastChar=cSPACE) then dec(parseStrLen);
+    if (byte(whereX+parseStrLen)>byte(ScreenWidth)) then
     begin
       newLine; putIndent;
     end;
-    if len>0 then
+    if parseStrLen>0 then
     begin
-      s[0]:=char(len);
-      move(@parseStr+1,@s+1,len);
-      write(s);
+      parseStr[0]:=char(parseStrLen);
+      write(parseStr);
     end;
-    if ch=cSPACE then begin write(cSPACE); inc(len); end;
-    inc(curX,len);
+    if parseLastChar=cSPACE then begin write(cSPACE); inc(parseStrLen); end;
   end;
 
   procedure putC(ch:Char);
   begin
-    if (curX>39) then newLine;
+    if (whereX>=ScreenWidth) then newLine;
     write(ch);
-    inc(curX);
   end;
 
 begin
-  if keyPressed then parseError:=errBreakParsing;
+  if keyPressed then exit(errBreakParsing);
 
   if isStyle(stylePrintable) then
   begin
     if isStyle(styleInvers) or isLink then inversString;
 
-    if isBeginTag(tagImageDescription) then Write('img#');
+    // if isBeginTag(tagImageDescription) then Write('img#');
     if isBeginTag(tagListUnordered) then
     begin
       putC(#$14); putC(#32);
@@ -118,25 +110,24 @@ begin
     end;
     if (isLineEnd and isHeader) or isBeginTag(tagHorizRule) then lineString;
   end;
+  result:=0;
 end;
 
 procedure parseMD();
 begin
   _callFlushBuffer:=@printMD;
   _callFetchLine:=@readLineFromFile;
-  prevTag:=0;
   parseMarkdown(statRedundantSpace);
-  if parseError<0 then
+  if parseError>-128 then
   begin
     writeLn;
     if parseError<>errEndOfDocument then
-      write(' Parse parseError: '*);
+      write(' Parse error: '*);
     case parseError of
-      // errEndOfDocument : writeLn('End of Document');
+      errBreakParsing  : writeLn('Break parsing');
       errBufferEnd     : writeLn('Buffer end');
       errTagStackEmpty : writeLn('Tag stack is empty');
       errTagStackFull  : writeLn('Tag stack is full');
-      errBreakParsing  : writeLn('Parse is break');
     end;
   end;
 end;
@@ -145,15 +136,14 @@ var
   fn:String;
 
 begin
-  poke(82,0); clrscr;
+  poke(82,0); screenWidth:=peek(83)+1;
   fn:=concat('D:',paramStr(1));
-  WriteLn('Read file ',fn,'...');
   opn(1,4,0,fn);
   if IOResult=1 then
     parseMD()
   else
     writeLn('IO error #',IOResult);
   cls(1);
-  writeLn('Press any key...');
-  ReadKey;
+  write('Press any key...');
+  ReadKey; writeLn;
 end.

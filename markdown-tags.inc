@@ -12,17 +12,22 @@ begin
     _changeStyle(style xor nStyle);
   end
   else
-  if _processChars(processFind,ch)>1 then
   begin
-    _removeChars(1);
-    _changeStyle(style xor nStyle);
-    prevTag:=tag;
+    tmp:=_processChars(processFind,parseLastChar);
+    if tmp>1 then
+    begin
+      _removeChars(1);
+      _changeStyle(style xor nStyle);
+      prevTag:=tag;
+    end
+    else
+      _previousChar(tmp);
   end;
 end;
 
 procedure checkBlock(nTag:Byte);
 begin
-  tmp:=_processChars(processCount,ch);
+  tmp:=_processChars(processCount,parseLastChar);
   if (tmp=3) then
   begin
     if not isWordBegin then
@@ -48,7 +53,7 @@ begin
     if isTag(tagCode) then // enable Fixed style for CODE block
       _changeStyle(style or styleFixed);
 
-    ch:=#0;
+    parseLastChar:=#0;
   end
   else
   if (not isBlock) then _previousChar(tmp);
@@ -59,7 +64,7 @@ begin
   if isLineBegin then
   begin
     tmp:=_processChars(processCount,cHEADER);
-    if (tmp>0) and (tmp<=8) and (ch=cSPACE) then
+    if (tmp>0) and (tmp<=8) and (parseLastChar=cSPACE) then
     begin
       _removeChars(tmp+1);
       pushTag(tagH1+tmp-1);
@@ -69,49 +74,39 @@ end;
 
 procedure checkList(listTag:Byte);
 begin
-  if (_processChars(processFind,cSPACE)=1) then
+  bytes:=_processChars(processFind,cSPACE);
+  if (bytes=1) then
   begin
     pushTag(listTag);
     _flushBuffer;
     popTag;
     pushTag(tagList);
-  end;
+  end
+  else
+    inc(tmp,bytes);
 end;
 
 procedure checkListUnordered();
 begin
-  if isLineBegin then checkList(tagListUnordered);
+  if isLineBegin then
+  begin
+    checkList(tagListUnordered);
+    if islist then exit;
+    _previousChar(tmp);
+  end;
 end;
 
 procedure checkListOrdered();
 begin
   if isLineBegin then
   begin
-    if (_processChars(processValue,#0)>0) and (ch=cOLIST) then
+    tmp:=_processChars(processValue,#0);
+    if (tmp>0) and (parseLastChar=cOLIST) then
+    begin
       checkList(tagListOrdered);
-  end;
-end;
-
-procedure checkLinkAddress();
-begin
-  if isLink then
-  begin
-    if ch=cOLADDR then
-    begin
-      if (_processChars(processFind,cCLADDR)>0) then
-      begin
-        _removeChars(1);
-        popTag();
-        pushTag(tagLinkDestination);
-        _changeStyle(style and (not stylePrintable));
-      end;
-    end
-    else
-    begin
-      _flushAndRemoveChar;
-      _changeStyle(style or stylePrintable);
-      popTag();
+      if islist then exit;
     end;
+    _previousChar(tmp);
   end;
 end;
 
@@ -119,7 +114,7 @@ procedure checkLinkDescription();
 begin
   if not isLink then
   begin
-    if ch=cOLDESC then
+    if parseLastChar=cOLDESC then
     begin
       if (_processChars(processFind,cCLDESC)>0) then
       begin
@@ -136,6 +131,29 @@ begin
     _flushAndRemoveChar;
     tag:=tagLink;
     _flushBuffer();
+  end;
+end;
+
+procedure checkLinkAddress();
+begin
+  if isLink then
+  begin
+    if parseLastChar=cOLADDR then
+    begin
+      if (_processChars(processFind,cCLADDR)>0) then
+      begin
+        _removeChars(1);
+        popTag();
+        pushTag(tagLinkDestination);
+        _changeStyle(style and (not stylePrintable));
+      end;
+    end
+    else
+    begin
+      _flushAndRemoveChar;
+      _changeStyle(style or stylePrintable);
+      popTag();
+    end;
   end;
 end;
 

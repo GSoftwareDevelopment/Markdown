@@ -17,9 +17,9 @@ Read the following information and the example file.
 - Images - `![title](link)`
 - *Horizontal rule* - `---` Single horizontal line
 - Two styles:
-  - *Inverted* - between the asterisk `* … *` characters
-  - *Underline* - between the underscore `_ … _` characters
-  - Fixed - between the single "backwards" apostrophe ``` … ` ``
+  - *Inverted* - between the asterisk characters
+  - *Underline* - between the underscore characters
+  - Fixed - between the single "backwards" apostrophe
 
 ## Features:
 
@@ -57,6 +57,7 @@ Current predefined parseError codes:
   - `statEndOfLine` - Whether it is at the ending of the line
   - `statESC` - Is there an escape character
   - `statRedundantSpaces` - removing redundant spaces flag
+  - `statContinueParse` - flag to disable parser initialization
 
 - It is possible to abort the parsing.
   From the `call` function, set the value of the `parseError` variable to the predefined value `errBreakParsing`.
@@ -91,6 +92,7 @@ The call procedure named `readLineFromFile` shows an implementation of such a so
 It uses the full size of the buffer and allows you to read in data.
 
 As a call parameter, specify the name of the file containing the document in MD format, e.g. `example1.pas`.
+
 ```
 A:>EXAMPLE2.XEX DOC.MD
 ```

@@ -1,3 +1,14 @@
+v.0.6
+- call procedure `_callFlushBuffer` is a function, it returns to the parser an error or 0 (zero) when everything OK
+- parser variable name matching:
+  `parseChar` -> `parseBufPtr` - pointer to the position in the buffer.
+  `ch` -> `parseLastChar` - the last parsed character.
+- possibility to skip the parser initialization, by passing the `statContinueParse` flag.
+- improved parsing of styles. For `FIXED` style, all characters are parsed, up to the close or end of the line
+- `example2.pas` adjusted new guidelines.
+  It now allows you to format your document correctly in different character modes (40/64/80 in SDX)
+- finally ISes are macros
+
 v.0.5 ( next day, and next day ;) )
 
 - renaming the parsing routine to `parseMarkdown(setup:byte)`
@@ -12,7 +23,7 @@ v.0.5 ( next day, and next day ;) )
   Every two consecutive spaces at the beginning of a line, define one level of indentation.
   _Note! The indentations are not sent by the procedure `call`._
 - removing redundant spaces - add `statRedundantSpaces` as a call parameter to the `parseMarkDown()` procedure
-- example2.pas - document formatting with indentation for lists and moving an uncompressed word to a new line.
+- `example2.pas` - document formatting with indentation for lists and moving an uncompressed word to a new line.
 
 v.0.5
 
@@ -28,8 +39,8 @@ v.0.5
 v.0.4
 
 - REM, CODE, CODEINSERT as block tag signature
-- block REM has new tag `\<<<` `\>>>` and no longer requires separating spaces
-- new tag Image \!\[title](link)
+- block REM has new tag `<<<` `>>>` and no longer requires separating spaces
+- new tag Image `![title](link)`
 
 v.0.3
 - procedure `_callFetchData` is now a function!
@@ -56,7 +67,7 @@ Supports tags:
 - *Indentation* - recognizes the TAB character, but deletes it, increasing the value of `lineIndentation`
 - *Dot lists* - dash + space
 - *Numeric lists* - number + period + space
-- *Links* - \[title](link)
+- *Links* - `[title](link)`
 - Two styles:
   - *Inverted* - between the asterisk characters
   - *Underline* - between the underscore characters
