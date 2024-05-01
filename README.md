@@ -1,6 +1,6 @@
 # Introduction
 
-The repository contains a library for MAD Pascal that offers Markdown source parsing capabilities.
+The repository contains a unit for MAD Pascal that offers Markdown source parsing capabilities.
 
 Read the following information and the example file.
 
@@ -8,7 +8,7 @@ Read the following information and the example file.
 
 - *H1-H4* headers
 - *Code* - with including language definition
-- *REM block* (proper name) `<<<` … `>>>` - everything contained between these tags, has Printable style disabled.
+- *REM block* (proper name) `<<<` ... `>>>` - everything contained between these tags, has Printable style disabled.
   It can be considered like a line or comment insertion, or with a little effort, parsed as, say, JSON
 - *Indentation* - recognizes the TAB character, but deletes it, increasing the value of `lineIndentation`
 - *Unordered lists* - dash + space
@@ -19,7 +19,7 @@ Read the following information and the example file.
 - Two styles:
   - *Inverted* - between the asterisk characters
   - *Underline* - between the underscore characters
-  - Fixed - between the single "backwards" apostrophe
+  - *Fixed* - between the single "backwards" apostrophe
 
 ## Features:
 
@@ -27,7 +27,7 @@ Read the following information and the example file.
 - LF EOL conversion during parsing
 - Use of procedural variables to call procedures:
 
-  `_callFlushBuffer` - a call procedure called to perform a user action on the returned string. In simple terms, displaying the text.
+  `_callFlushBuffer` - a call function called to perform a user action on the returned string. In simple terms, displaying the text.
 
   `_callFetchLine` - a call function, fetching a line (paragraph) of MarkDown code into a buffer for processing.
 
